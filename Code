@@ -1,1 +1,336 @@
 
+/*
+==============================================
+ ▼▼▼ 出荷伝票Webアプリ_最終版 ▼▼▼
+     (コード.gs)
+     (「処理日時」のタイムゾーン9時間ズレを修正)
+==============================================
+*/
+
+/**
+ * ★★★ ID修正済み ★★★
+ * データを読み書きするスプレッドシート（「受注データ」「受注明細」が入っている方）のID
+ */
+const SPREADSHEET_ID_DATA = '1fQQCSwZj9Eo4D6ZOS9uIHCtz0jRX5ZyMrjePwnaEdlM';
+
+/**
+ * ★★★ ID修正済み ★★★
+ * コピー元となる、新しく「Googleスプレッドシートとして保存」した「ひな形」のID
+ */
+const TEMPLATE_SPREADSHEET_ID = '1hHbiSfg3Dhp2zzTxq3Eb9FgH8ImnK44nxR39yRUSWiQ';
+
+/**
+ * コピー元となる「出荷明細書ひな形」の「シート名」
+ */
+const TEMPLATE_SHEET_NAME = '出荷明細';
+
+
+// ▼ 各シートの名前（受注データ側）
+const SHEET_JUCHU_DATA = '受注データ';
+const SHEET_JUCHU_MEISAI = '受注明細';
+const SHEET_TANTOSHA_MASTER = '担当者マスタ';
+const SHEET_SHUKKA_LOG = '出荷済明細';
+
+
+/**
+ * ----------------------------------------------------
+ * ★★★ このWebアプリの「唯一の入り口」です ★★★
+ * ----------------------------------------------------
+ */
+function doGet(e) {
+  // DriveAppの権限を強制的に要求する（承認用）
+  try { DriveApp.getFiles(); } catch (e) {}
+
+  if (!e || !e.parameter || !e.parameter.juchuNo) {
+    return HtmlService.createHtmlOutput('エラー：受注Noが指定されていません。AppSheetから開き直してください。');
+  }
+  const htmlTemplate = HtmlService.createTemplateFromFile('shukka');
+  htmlTemplate.juchuNo = e.parameter.juchuNo;
+  return htmlTemplate.evaluate()
+    .setTitle('出荷処理Webアプリ')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+
+/**
+ * ----------------------------------------------------
+ * Webページ（shukka.html）から呼び出される処理
+ * Webページに必要な初期データを渡します。
+ * (この関数は、すでに正常に動作しています)
+ * ----------------------------------------------------
+ */
+function getSalesOrderData(juchuNo) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID_DATA);
+    
+    // --- 1. 受注データ（親）の読み込み ---
+    const juchuDataSheet = ss.getSheetByName(SHEET_JUCHU_DATA);
+    if (!juchuDataSheet) throw new Error(SHEET_JUCHU_DATA + 'シートが見つかりません');
+    
+    const juchuHeader = juchuDataSheet.getRange(1, 1, 1, juchuDataSheet.getLastColumn()).getValues()[0];
+    const juchuData = juchuDataSheet.getDataRange().getValues();
+    
+    // 取得する列の定義
+    const colIdxJuchuNo = juchuHeader.indexOf('受注No') + 1;
+    const colIdxTokuisakiCode = juchuHeader.indexOf('得意先コード') + 1;
+    const colIdxTokuisaki = juchuHeader.indexOf('得意先名') + 1;
+    const colIdxChokusosaki = juchuHeader.indexOf('直送先名') + 1; 
+    const colIdxChokusosaki2 = juchuHeader.indexOf('直送先名２') + 1;
+    const colIdxSenpoTantosha = juchuHeader.indexOf('先方担当者名') + 1;
+    const colIdxPostalCode = juchuHeader.indexOf('郵便番号') + 1; 
+    const colIdxAddress1 = juchuHeader.indexOf('住所１') + 1; 
+    const colIdxAddress2 = juchuHeader.indexOf('住所２') + 1; 
+    const colIdxTantoshaCode = juchuHeader.indexOf('担当者コード') + 1;
+    const colIdxFMInfoNo = juchuHeader.indexOf('FM情報No') + 1;
+    const colIdxFMShukkaNo = juchuHeader.indexOf('FM出荷No') + 1;
+    const colIdxKaishaTel = juchuHeader.indexOf('会社TEL') + 1;
+
+    if (colIdxJuchuNo === 0 || colIdxTokuisakiCode === 0 || colIdxTokuisaki === 0 || colIdxChokusosaki === 0 || 
+        colIdxSenpoTantosha === 0 || colIdxTantoshaCode === 0 || colIdxPostalCode === 0 || colIdxAddress1 === 0 ||
+        colIdxFMInfoNo === 0 || colIdxFMShukkaNo === 0 || colIdxKaishaTel === 0 ) {
+      throw new Error('受注データシートの必須ヘッダー（...FM情報No, FM出荷No, 会社TEL...）のいずれかが見つかりません');
+    }
+
+    let juchuRow = null;
+    for (let i = 1; i < juchuData.length; i++) {
+      if (String(juchuData[i][colIdxJuchuNo - 1]) === String(juchuNo)) {
+        juchuRow = juchuData[i];
+        break;
+      }
+    }
+    if (!juchuRow) throw new Error('受注No: ' + juchuNo + ' が見つかりません');
+    const tantoshaCode = juchuRow[colIdxTantoshaCode - 1];
+
+    // --- 2. 担当者名の読み込み ---
+    const tantoshaMasterSheet = ss.getSheetByName(SHEET_TANTOSHA_MASTER);
+    if (!tantoshaMasterSheet) throw new Error(SHEET_TANTOSHA_MASTER + 'シートが見つかりません');
+    
+    const tantoshaData = tantoshaMasterSheet.getRange('A:B').getValues(); 
+    let tantoshaName = '（担当者不明）';
+    for (let i = 1; i < tantoshaData.length; i++) { 
+      if (String(tantoshaData[i][0]) === String(tantoshaCode)) {
+        tantoshaName = tantoshaData[i][1];
+        break;
+      }
+    }
+    
+    // --- 3. 受注明細（子）の読み込み ---
+    const meisaiSheet = ss.getSheetByName(SHEET_JUCHU_MEISAI);
+    if (!meisaiSheet) throw new Error(SHEET_JUCHU_MEISAI + 'シートが見つかりません');
+    const meisaiHeader = meisaiSheet.getRange(1, 1, 1, meisaiSheet.getLastColumn()).getValues()[0];
+    const meisaiData = meisaiSheet.getDataRange().getValues();
+    const colIdxMeisaiNo = meisaiHeader.indexOf('受注明細No') + 1;
+    const colIdxJuchuNo_Meisai = meisaiHeader.indexOf('受注No') + 1;
+    const colIdxShohinCode = meisaiHeader.indexOf('商品コード') + 1;
+    const colIdxShohin = meisaiHeader.indexOf('商品名') + 1;
+    const colIdxSuryo = meisaiHeader.indexOf('数量') + 1;
+    const colIdxShukkaZumi = meisaiHeader.indexOf('出荷済数') + 1; // AV列のはず
+    
+    if (colIdxMeisaiNo === 0 || colIdxJuchuNo_Meisai === 0 || colIdxShohinCode === 0 || 
+        colIdxShohin === 0 || colIdxSuryo === 0 || colIdxShukkaZumi === 0) {
+      throw new Error('受注明細シートの必須ヘッダー（受注明細No, 受注No, 商品コード, 商品名, 数量, 出荷済数）のいずれかが見つかりません');
+    }
+
+    // --- 4. Webページに返すデータを整形 ---
+    const meisaiList = [];
+    for (let i = 1; i < meisaiData.length; i++) { 
+      const row = meisaiData[i];
+      if (String(row[colIdxJuchuNo_Meisai - 1]) === String(juchuNo)) {
+        const juchuSuryo = Number(row[colIdxSuryo - 1] || 0);
+        const shukkaZumiSuryo = Number(row[colIdxShukkaZumi - 1] || 0);
+        const shukkaKanoSuryo = juchuSuryo - shukkaZumiSuryo; 
+        if (shukkaKanoSuryo > 0) {
+          meisaiList.push({
+            meisaiNo: row[colIdxMeisaiNo - 1],
+            shohinCode: row[colIdxShohinCode - 1],
+            shohinName: row[colIdxShohin - 1],
+            juchuSuryo: juchuSuryo,         
+            shukkaZumiSuryo: shukkaZumiSuryo, 
+            shukkaKanoSuryo: shukkaKanoSuryo, 
+            rowNum: i + 1
+          });
+        }
+      }
+    }
+
+    // 戻り値に、ひな形に必要な情報をすべて追加
+    return {
+      status: 'success',
+      juchuNo: juchuNo,
+      tokuisakiCode: juchuRow[colIdxTokuisakiCode - 1] || '',
+      tokuisakiName: juchuRow[colIdxTokuisaki - 1],
+      chokusosakiName: juchuRow[colIdxChokusosaki - 1],
+      chokusosakiName2: juchuRow[colIdxChokusosaki2 - 1] || '',
+      senpoTantoshaName: juchuRow[colIdxSenpoTantosha - 1] || '',
+      postalCode: juchuRow[colIdxPostalCode - 1] || '',
+      address1: juchuRow[colIdxAddress1 - 1] || '',
+      address2: juchuRow[colIdxAddress2 - 1] || '',
+      tantoshaName: tantoshaName,
+      fmInfoNo: juchuRow[colIdxFMInfoNo - 1] || '',
+      fmShukkaNo: juchuRow[colIdxFMShukkaNo - 1] || '',
+      kaishaTel: juchuRow[colIdxKaishaTel - 1] || '',
+      meisaiList: meisaiList
+    };
+
+  } catch (e) {
+    Logger.log(e);
+    return { status: 'error', message: e.message };
+  }
+}
+
+
+/**
+ * ----------------------------------------------------
+ * Webページ（shukka.html）から呼び出される処理
+ * 「出荷伝票を作成する」ボタンが押されたときに実行されます。
+ * ★★★ 修正箇所 ★★★
+ * 1. 処理日時を「日本時間の文字列」として取得
+ * 2. ファイル名も「日本時間」で作成
+ * ----------------------------------------------------
+ */
+function processShipment(shipmentData) {
+  try {
+    const ssData = SpreadsheetApp.openById(SPREADSHEET_ID_DATA);
+    const meisaiSheet = ssData.getSheetByName(SHEET_JUCHU_MEISAI);
+    
+    // --- 1.「出荷済数」列を特定 ---
+    const meisaiHeader = meisaiSheet.getRange(1, 1, 1, meisaiSheet.getLastColumn()).getValues()[0];
+    const colIdxShukkaZumi = meisaiHeader.indexOf('出荷済数') + 1;
+    if (colIdxShukkaZumi === 0) {
+      throw new Error('受注明細シートのヘッダーに「出荷済数」列が見つかりません。');
+    }
+
+    // --- 2.「出荷済明細」シートの準備 ★★★ 修正 ★★★
+    let logSheet = ssData.getSheetByName(SHEET_SHUKKA_LOG);
+    if (!logSheet) {
+      logSheet = ssData.insertSheet(SHEET_SHUKKA_LOG);
+      logSheet.appendRow([
+        '処理日時', '受注明細No', '受注No', '商品コード', '商品名', '出荷済数', '出荷日', '到着日', '到達時刻'
+      ]);
+    }
+    
+    // ★★★ 修正箇所 ★★★
+    // タイムゾーンのズレを防ぐため、Dateオブジェクトではなく、「日本時間の文字列」として日時を作成します
+    const now = new Date();
+    const processDateTimeString = Utilities.formatDate(now, "JST", "yyyy/MM/dd HH:mm:ss");
+    const newFileNameDateTime = Utilities.formatDate(now, 'JST', 'yyyyMMddHHmm');
+    const formattedShippingDate = Utilities.formatDate(new Date(shipmentData.shippingDate), "JST", "yyyy/MM/dd");
+    const formattedArrivalDate = Utilities.formatDate(new Date(shipmentData.arrivalDate), "JST", "yyyy/MM/dd");
+    
+    // --- 3. 出荷処理（「出荷済数」の更新 と「出荷済明細」への追記）★★★ 修正 ★★★
+    shipmentData.items.forEach(item => {
+      // (A) 「受注明細」シートの「出荷済数」を更新
+      const targetCell = meisaiSheet.getRange(item.rowNum, colIdxShukkaZumi);
+      const currentZumi = Number(targetCell.getValue() || 0);
+      const newZumi = currentZumi + Number(item.shukkaSu);
+      targetCell.setValue(newZumi); 
+      
+      // (B) 「出荷済明細」シートにご指定の形式で記録
+      logSheet.appendRow([
+        processDateTimeString,    // ★修正★ 処理日時（日本時間の文字列）
+        item.meisaiNo,            // 受注明細No
+        shipmentData.juchuNo,     // 受注No
+        item.shohinCode,          // 商品コード
+        item.shohinName,          // 商品名
+        item.shukkaSu,            // 出荷済数 (今回出荷した数)
+        shipmentData.shippingDate,// 出荷日 (HTMLからの YYYY-MM-DD 文字列)
+        shipmentData.arrivalDate, // 到着日 (HTMLからの YYYY-MM-DD 文字列)
+        shipmentData.arrivalTime  // 到達時刻
+      ]);
+    });
+
+    /*
+    ========================================================
+    ▼▼▼ ここからが「新スプレッドシート作成」処理です ▼▼▼
+    ========================================================
+    */
+
+    // --- 4. 新しいスプレッドシートの作成 ---
+    
+    // (A) テンプレートファイル（1hHbiSfg...）を「スプレッドシートとして」開く
+    const templateSS = SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID);
+    
+    // (B) ファイル名を決める ★★★ 修正 ★★★ (日本時間で)
+    const newFileName = `出荷明細書_${shipmentData.juchuNo}_${newFileNameDateTime}`;
+    
+    // (C) スプレッドシートサービス内で「コピー」を実行
+    const newSS = templateSS.copy(newFileName); 
+    
+    // (E) 新しく作ったファイル（コピー）から、操作対象のシートを取得する
+    const newSheet = newSS.getSheetByName(TEMPLATE_SHEET_NAME);
+    if (!newSheet) {
+      DriveApp.getFileById(newSS.getId()).setTrashed(true); // 失敗したファイルをゴミ箱へ
+      throw new Error(`テンプレートファイル(${TEMPLATE_SPREADSHEET_ID})内に、'${TEMPLATE_SHEET_NAME}' という名前のシートが見つかりません。シート名を確認してください。`);
+    }
+
+    // (F) テンプレート内の「％...％」を、ご指定の通りに一括で置き換える ★★★ 修正 ★★★
+    newSheet.createTextFinder('％得意先コード％').replaceAllWith(shipmentData.tokuisakiCode);
+    newSheet.createTextFinder('％得意先名％').replaceAllWith(shipmentData.tokuisakiName);
+    newSheet.createTextFinder('％先方担当者％').replaceAllWith(shipmentData.senpoTantoshaName);
+    
+    // HTMLから渡された YYYY-MM-DD 形式の日付をそのまま使う
+    newSheet.createTextFinder('％出荷日％').replaceAllWith(shipmentData.shippingDate);
+    newSheet.createTextFinder('％到着日％').replaceAllWith(shipmentData.arrivalDate);
+    newSheet.createTextFinder('％到着時刻％').replaceAllWith(shipmentData.arrivalTime);
+
+    newSheet.createTextFinder('％担当者名％').replaceAllWith(shipmentData.tantoshaName);
+    newSheet.createTextFinder('％受注番号％').replaceAllWith(shipmentData.juchuNo);
+    newSheet.createTextFinder('％直送先名１％').replaceAllWith(shipmentData.chokusosakiName);
+    newSheet.createTextFinder('％直送先名２％').replaceAllWith(shipmentData.chokusosakiName2);
+    newSheet.createTextFinder('％直送先郵便番号％').replaceAllWith(shipmentData.postalCode);
+    newSheet.createTextFinder('％直送先住所１％').replaceAllWith(shipmentData.address1);
+    newSheet.createTextFinder('％直送先住所２％').replaceAllWith(shipmentData.address2);
+    
+    newSheet.createTextFinder('％FM情報No％').replaceAllWith(shipmentData.fmInfoNo);
+    newSheet.createTextFinder('％FM出荷No％').replaceAllWith(shipmentData.fmShukkaNo);
+    
+    newSheet.createTextFinder('％会社TEL％').replaceAllWith(shipmentData.kaishaTel);
+    
+    // (G) セルへの直接書き込み命令（AR5, AR6）を削除（テキスト置換で対応）
+    
+    // (H) 商品リストをセルに直接書き込む
+    const START_ROW = 14; // A14
+    const ITEM_COL = 1;   // A列
+    const QTY_COL = 16;   // P列
+    const TEMPLATE_ROWS = 20; // A14～A33 の 20行
+
+    shipmentData.items.forEach((item, index) => {
+      if (index < TEMPLATE_ROWS) { 
+        const currentRow = START_ROW + index;
+        newSheet.getRange(currentRow, ITEM_COL).setValue(item.shohinName); 
+        newSheet.getRange(currentRow, QTY_COL).setValue(item.shukkaSu);   
+      }
+    });
+
+    // (I) もし出荷した商品数がテンプレートの行数より少ない場合、残りの「％...％」を削除する
+    if (shipmentData.items.length < TEMPLATE_ROWS) {
+      const remainingRows = TEMPLATE_ROWS - shipmentData.items.length;
+      const remainingStartRow = START_ROW + shipmentData.items.length;
+      
+      newSheet.getRange(remainingStartRow, ITEM_COL, remainingRows, 1).clearContent();
+      newSheet.getRange(remainingStartRow, QTY_COL, remainingRows, 1).clearContent();
+    }
+
+    // (J) 不要なシート（もしテンプレートにあれば）を削除する
+    const allSheets = newSS.getSheets();
+    if (allSheets.length > 1) {
+      allSheets.forEach(sheet => {
+        if (sheet.getName() !== TEMPLATE_SHEET_NAME) {
+          newSS.deleteSheet(sheet);
+        }
+      });
+    }
+
+    // --- 5. 成功結果を返す ---
+    return {
+      status: 'success',
+      newSheetUrl: newSS.getUrl(), 
+      newSheetName: newFileName
+    };
+    
+  } catch (e) {
+    Logger.log(e);
+    // エラーメッセージを、Webページ（shukka.html）の showError 関数に渡す
+    return { status: 'error', message: e.message };
+  }
+}
