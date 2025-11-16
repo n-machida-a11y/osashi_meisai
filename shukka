@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      font-size: 1.5em;
+      color: #444;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    h2 {
+      font-size: 1.2em;
+      color: #555;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      padding: 20px;
+    }
+    
+    /* 3列レイアウト */
+    .shipment-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr; 
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .shipment-options div {
+      display: flex;
+      flex-direction: column;
+    }
+    .shipment-options label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+    }
+    .shipment-options input[type="date"],
+    .shipment-options select {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+      box-sizing: border-box; 
+      width: 100%;
+    }
+    
+    .item-list {
+      list-style: none;
+      padding: 0;
+    }
+    .item {
+      border-bottom: 1px solid #eee;
+      padding: 15px 5px;
+    }
+    .item:last-child {
+      border-bottom: none;
+    }
+    .item-header {
+      display: flex;
+      align-items: center;
+    }
+    .item-header input[type="checkbox"] {
+      margin-right: 15px;
+      transform: scale(1.5);
+    }
+    .item-details {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 10px;
+      padding-left: 35px;
+    }
+    .item-details span {
+      margin-right: 15px;
+      display: inline-block;
+      min-width: 80px;
+    }
+    .ship-input {
+      margin-top: 10px;
+      padding-left: 35px;
+    }
+    .ship-input label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .ship-input input[type="number"] {
+      width: 100px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    .ship-input input[type="number"]:disabled {
+      background: #f0f0f0;
+      cursor: not-allowed;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1.1em;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 10px;
+    }
+    .button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+    .button-secondary {
+      background-color: #6c757d;
+    }
+    .select-all {
+      font-size: 1.1em;
+      font-weight: bold;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+    }
+    .select-all input {
+      margin-right: 15px;
+      transform: scale(1.5);
+    }
+    #loader {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      z-index: 999;
+      text-align: center;
+      padding-top: 40vh;
+      font-size: 1.2em;
+    }
+    #message-area {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    #message-area.success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    #message-area.error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    #pdf-download-link {
+      display: block;
+      margin-top: 15px;
+      font-size: 1.1em;
+      font-weight: bold;
+      text-decoration: none;
+      background-color: #28a745;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="main-content">
+    <div class="card">
+      <h1><span id="juchu-no-title"></span> の出荷処理</h1>
+      <h2>得意先名: <span id="tokuisaki-name"></span></h2>
+      <h2>直送先名: <span id="chokusosaki-name"></span></h2>
+
+      <div class="shipment-options">
+        <div>
+          <label for="shipping-date">出荷日</label>
+          <input type="date" id="shipping-date">
+        </div>
+        <div>
+          <label for="arrival-date">到着日</label>
+          <input type="date" id="arrival-date">
+        </div>
+        <div>
+          <label for="arrival-time">到着時刻</label>
+          <select id="arrival-time">
+            <option value="午前中">午前中</option>
+            <option value="14時～16時">14時～16時</option>
+            <option value="16時～18時">16時～18時</option>
+            <option value="18時以降">18時以降</option>
+            <option value="指定なし">指定なし</option>
+          </select>
+        </div>
+      </div>
+      
+    </div>
+
+    <div class="card">
+      <div class="select-all">
+        <input type="checkbox" id="check-all" onchange="toggleAll(this)">
+        <label for="check-all">全選択</label>
+      </div>
+      <ul class="item-list" id="item-list-container">
+      </ul>
+    </div>
+    
+    <button id="submit-button" class="button" onclick="handleSubmit()">
+      出荷伝票を作成する
+    </button>
+  </div>
+  
+  <div id="message-area" style="display: none;"></div>
+
+  <div id="loader">
+    <p>受注伝票を読み込み中です。<br>しばらくお待ちください。</p>
+  </div>
+
+
+  <script>
+    // このページの受注Noや住所情報を保持するためのグローバル変数（共有の箱）
+    let currentJuchuNo = null; 
+    let currentTantoshaName = '';
+    let currentTokuisakiCode = '';
+    let currentTokuisakiName = '';
+    let currentChokusosakiName = '';
+    let currentChokusosakiName2 = '';
+    let currentSenpoTantoshaName = '';
+    let currentPostalCode = '';
+    let currentAddress1 = '';
+    let currentAddress2 = '';
+    let currentFMInfoNo = '';
+    let currentFMShukkaNo = '';
+    let currentKaishaTel = ''; // ★追加
+    
+    
+    // このWebページ（HTML）が読み込まれた瞬間に実行される処理
+    window.onload = function() {
+      currentJuchuNo = "<?= juchuNo ?>"; 
+      
+      setTodayToDateInput('shipping-date');
+      setTodayToDateInput('arrival-date'); 
+      
+      runDataFetch();
+    };
+    
+    /**
+     * 指定されたIDのカレンダーに「本日」をセットする
+     */
+    function setTodayToDateInput(inputId) {
+      const today = new Date();
+      today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+      const yyyyMmDd = today.toISOString().split('T')[0];
+      document.getElementById(inputId).value = yyyyMmDd;
+    }
+
+    /**
+     * データをサーバー(コード.gs)から取得し、画面を描画する処理
+     */
+    function runDataFetch() {
+      // ローディング文言を「読み込み中」に戻す
+      document.getElementById('loader').innerHTML = '<p>受注伝票を読み込み中です。<br>しばらくお待ちください。</p>';
+      
+      showLoader(true);
+      document.getElementById('message-area').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      document.getElementById('submit-button').disabled = false;
+      
+      setTodayToDateInput('shipping-date');
+      setTodayToDateInput('arrival-date');
+      
+      google.script.run
+        .withSuccessHandler(displayData)
+        .withFailureHandler(showError)
+        .getSalesOrderData(currentJuchuNo);
+    }
+
+    /**
+     * (A) 裏側からのデータ取得に「成功」したときに実行される関数
+     * ★★★ 修正箇所 ★★★
+     * 「会社TEL」もグローバル変数に保存する
+     */
+    function displayData(data) {
+      showLoader(false); 
+      
+      if (data.status === 'error') {
+        showError(new Error(data.message));
+        return;
+      }
+      
+      // 取得したデータを、HTMLの表示とグローバル変数（共有の箱）の両方にセット
+      document.getElementById('juchu-no-title').textContent = data.juchuNo;
+      document.getElementById('tokuisaki-name').textContent = data.tokuisakiName;
+      document.getElementById('chokusosaki-name').textContent = data.chokusosakiName;
+      
+      // グローバル変数に、テンプレートに必要な情報をすべて保存
+      currentJuchuNo = data.juchuNo;
+      currentTantoshaName = data.tantoshaName;
+      currentTokuisakiCode = data.tokuisakiCode;
+      currentTokuisakiName = data.tokuisakiName;
+      currentChokusosakiName = data.chokusosakiName;
+      currentChokusosakiName2 = data.chokusosakiName2;
+      currentSenpoTantoshaName = data.senpoTantoshaName;
+      currentPostalCode = data.postalCode;
+      currentAddress1 = data.address1;
+      currentAddress2 = data.address2;
+      currentFMInfoNo = data.fmInfoNo;
+      currentFMShukkaNo = data.fmShukkaNo;
+      currentKaishaTel = data.kaishaTel; // ★追加
+
+      const container = document.getElementById('item-list-container');
+      container.innerHTML = ''; 
+      document.getElementById('check-all').checked = false;
+      
+      if (data.meisaiList.length === 0) {
+        container.innerHTML = '<p>出荷可能な商品（残数がある商品）はありません。</p>';
+        document.getElementById('submit-button').disabled = true; 
+        return;
+      }
+
+      // 商品リストの描画
+      data.meisaiList.forEach(function(item) {
+        const li = document.createElement('li');
+        li.className = 'item';
+        
+        li.dataset.meisaiNo = item.meisaiNo;
+        li.dataset.rowNum = item.rowNum;
+        li.dataset.shohinName = item.shohinName;
+        li.dataset.kanoSuryo = item.shukkaKanoSuryo; // 最大値をデータとして保持
+        li.dataset.shohinCode = item.shohinCode; 
+        
+        li.innerHTML = `
+          <div class="item-header">
+            <input type="checkbox" class="item-check" onchange="toggleInput(this)">
+            <strong>${item.shohinName}</strong>
+          </div>
+          <div class="item-details">
+            <span>受注数: ${item.juchuSuryo}</span>
+            <span>出荷済: ${item.shukkaZumiSuryo}</span>
+            <span><strong>出荷可能数: ${item.shukkaKanoSuryo}</strong></span>
+          </div>
+          <div class="ship-input">
+            <label for="input-${item.meisaiNo}">今回出荷する数量:</label>
+            <input 
+              type="number" 
+              id="input-${item.meisaiNo}" 
+              class="item-quantity"
+              min="1" 
+              max="${item.shukkaKanoSuryo}" 
+              placeholder="1～${item.shukkaKanoSuryo}"
+              disabled> 
+          </div>
+        `;
+        container.appendChild(li);
+      });
+    }
+    
+    // (B) 失敗時の処理
+    function showError(error) {
+      showLoader(false); 
+      const msgArea = document.getElementById('message-area');
+      msgArea.style.display = 'block';
+      msgArea.className = 'error';
+      msgArea.innerHTML = `
+        <strong>エラーが発生しました</strong><br>
+        ${error.message}<br>
+        (AppSheetに戻り、再度お試しください)
+      `;
+      document.getElementById('main-content').style.display = 'none';
+    }
+
+    /**
+     * (C) チェックボックスが押されたときに、入力欄の有効/無効を切り替える関数
+     * （チェック時に最大値を自動入力）
+     */
+    function toggleInput(checkbox) {
+      const li = checkbox.closest('.item');
+      const input = li.querySelector('.item-quantity');
+      const kanoSu = li.dataset.kanoSuryo; 
+      
+      if (checkbox.checked) {
+        input.disabled = false; 
+        input.value = kanoSu; // ★自動で最大値をセット
+        input.focus(); 
+      } else {
+        input.disabled = true; 
+        input.value = ''; 
+      }
+    }
+    
+    // (D) 全選択の処理
+    function toggleAll(selectAllCheckbox) {
+      const checkboxes = document.querySelectorAll('.item-check');
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = selectAllCheckbox.checked; 
+        toggleInput(checkbox); 
+      });
+    }
+
+    /**
+     * (E) 「出荷伝票を作成する」ボタンが押されたときに実行される関数
+     * ★★★ 修正箇所 ★★★
+     * 1. ローディング文言を「作成中です...」に変更
+     * 2. 裏側に渡す `shipmentData` に、「会社TEL」も追加する
+     */
+    function handleSubmit() {
+      const checkedItems = document.querySelectorAll('.item-check:checked');
+      
+      if (checkedItems.length === 0) {
+        alert('出荷する商品が1つも選択されていません。');
+        return;
+      }
+      
+      // 1. 新しい入力欄から値を取得
+      const shippingDate = document.getElementById('shipping-date').value;
+      const arrivalDate = document.getElementById('arrival-date').value;
+      const arrivalTime = document.getElementById('arrival-time').value;
+      
+      if (!shippingDate) {
+        alert('出荷日を入力してください。');
+        document.getElementById('shipping-date').focus();
+        return;
+      }
+      if (!arrivalDate) {
+        alert('到着日を入力してください。');
+        document.getElementById('arrival-date').focus();
+        return;
+      }
+      
+      // 2. 渡すデータにすべての情報を追加
+      const shipmentData = {
+        // ひな形ヘッダー用
+        juchuNo: currentJuchuNo, 
+        tokuisakiCode: currentTokuisakiCode,
+        tokuisakiName: currentTokuisakiName,
+        chokusosakiName: currentChokusosakiName,
+        chokusosakiName2: currentChokusosakiName2,
+        senpoTantoshaName: currentSenpoTantoshaName,
+        postalCode: currentPostalCode,
+        address1: currentAddress1,
+        address2: currentAddress2,
+        tantoshaName: currentTantoshaName,
+        shippingDate: shippingDate,
+        arrivalDate: arrivalDate,
+        arrivalTime: arrivalTime,
+        fmInfoNo: currentFMInfoNo,
+        fmShukkaNo: currentFMShukkaNo,
+        kaishaTel: currentKaishaTel, // ★追加
+        
+        // 商品リスト用
+        items: [] 
+      };
+      
+      let validationError = false; 
+      
+      // 商品リストのチェック
+      checkedItems.forEach(function(checkbox) {
+        const li = checkbox.closest('.item');
+        const input = li.querySelector('.item-quantity');
+        const shukkaSu = parseInt(input.value, 10); 
+        const kanoSu = parseInt(li.dataset.kanoSuryo, 10); 
+        
+        if (isNaN(shukkaSu) || shukkaSu <= 0) {
+          alert(`「${li.dataset.shohinName}」\n出荷数量が正しく入力されていません。`);
+          input.focus();
+          validationError = true;
+          return;
+        }
+        if (shukkaSu > kanoSu) {
+          alert(`「${li.dataset.shohinName}」\n出荷数量（${shukkaSu}）が、出荷可能数（${kanoSu}）を超えています。`);
+          input.focus();
+          validationError = true;
+          return;
+        }
+        
+        shipmentData.items.push({
+          meisaiNo: li.dataset.meisaiNo,
+          rowNum: parseInt(li.dataset.rowNum, 10),
+          shohinCode: li.dataset.shohinCode, // 商品コード
+          shohinName: li.dataset.shohinName,
+          shukkaSu: shukkaSu
+        });
+      });
+      
+      if (validationError) return;
+
+      if (!confirm(`${shipmentData.items.length}件の商品を出荷処理します。\nよろしいですか？\n（実行するとスプレッドシートの「出荷済数」が更新されます）`)) {
+        return; 
+      }
+
+      // ★★★ 修正箇所 ★★★
+      // ローディング文言を「作成中です...」に変更
+      document.getElementById('loader').innerHTML = '<p>処理中です...<br>出荷伝票を作成しています。<br>しばらくお待ちください。</p>';
+      
+      showLoader(true); 
+      document.getElementById('submit-button').disabled = true; 
+
+      // 裏側(コード.gs)の「processShipment」関数を呼び出します
+      google.script.run
+        .withSuccessHandler(showSuccess)
+        .withFailureHandler(showError)
+        .processShipment(shipmentData); // すべての情報が詰まったデータを渡す
+    }
+    
+    /**
+     * (F) 出荷処理に「成功」したときに実行される関数
+     * (新スプレッドシートへのリンクを表示する)
+     */
+    function showSuccess(result) {
+      showLoader(false); 
+      
+      if (result.status === 'error') {
+        showError(new Error(result.message));
+        return;
+      }
+      
+      document.getElementById('main-content').style.display = 'none';
+
+      const msgArea = document.getElementById('message-area');
+      msgArea.style.display = 'block';
+      msgArea.className = 'success';
+      
+      // 表示メッセージを変更
+      msgArea.innerHTML = `
+        <strong>出荷処理が完了しました。</strong><br>
+        「出荷済明細」シートに記録し、「出荷済数」を更新しました。<br>
+        新しいスプレッドシート（${result.newSheetName}）が作成されました。<br><br>
+        
+        <a href="${result.newSheetUrl}" target="_blank" id="pdf-download-link">
+          作成した伝票ファイルを開く
+        </a>
+        <br>
+        
+        <button class="button button-secondary" onclick="runDataFetch()">
+          続けて別の出荷処理を行う（画面を更新）
+        </button>
+      `;
+      
+      // リンク先を設定
+      const link = document.getElementById('pdf-download-link');
+      link.href = result.newSheetUrl;
+      link.target = "_blank"; 
+    }
+    
+    // (G) ローディング画面の処理
+    function showLoader(visible) {
+      document.getElementById('loader').style.display = visible ? 'block' : 'none';
+    }
+
+  </script>
+</body>
+</html>
