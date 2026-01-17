@@ -2,7 +2,7 @@
 ==============================================
  ▼▼▼ 出荷伝票アプリ_最終完全版 ▼▼▼
      (コード.gs)
-     (保存先フォルダ指定機能を追加)
+     (ファイル名に「_出荷明細」を追加)
 ==============================================
 */
 
@@ -10,11 +10,8 @@ const SPREADSHEET_ID_DATA = '1L2DgOm3gfEZMwoe2TDjzBJuq5cHB2SlBlwg6vifg5IE';
 const TEMPLATE_SPREADSHEET_ID = '18IeZGdj37uS6WWWiaRB9befGkN7nV6XmRamDXGTkmww';
 const TEMPLATE_SHEET_NAME = '出荷明細';
 const YAMATO_SHEET_NAME = 'ヤマト伝票用直送先情報'; 
-
-// ★★★ 追加：保存先フォルダのID ★★★
 const DESTINATION_FOLDER_ID = '1IOXFQ54GcZs-xxFp07z7MALqe2SxFT-u';
 
-// ▼ 各シートの名前
 const SHEET_JUCHU_DATA = '受注データ';
 const SHEET_JUCHU_MEISAI = '受注明細';
 const SHEET_TANTOSHA_MASTER = '担当者マスタ';
@@ -231,8 +228,7 @@ function processShipment(shipmentData) {
     }
 
     const meisaiSheet = ssData.getSheetByName(SHEET_JUCHU_MEISAI);
-    const mHeader = meisaiSheet.getRange(1, 1, 1, meisaiSheet.getLastColumn()).getValues()[0];
-    const colIdxShukkaZumi = mHeader.indexOf('出荷済数') + 1;
+    const colIdxShukkaZumi = meisaiSheet.getRange(1, 1, 1, meisaiSheet.getLastColumn()).getValues()[0].indexOf('出荷済数') + 1;
 
     // 1. 履歴シート
     let historySheet = ssData.getSheetByName(SHEET_SHUKKA_HISTORY);
@@ -303,19 +299,16 @@ function processShipment(shipmentData) {
     if (originalSlipId) suffix = "_Ver2";
     
     const shipDateForFile = shipmentData.shippingDate.replace(/-/g, '');
-    const newFileName = `${shipmentData.juchuNo}_${shipmentData.tokuisakiName}_${shipmentData.tokuisakiName2}_${shipDateForFile}${suffix}`;
+    
+    // ★★★ 修正箇所：ファイル名の命名ルール ★★★
+    const newFileName = `${shipmentData.juchuNo}_${shipmentData.tokuisakiName}_${shipmentData.tokuisakiName2}_${shipDateForFile}_出荷明細${suffix}`;
     
     const newSS = templateSS.copy(newFileName);
-    
-    // ★★★ 修正箇所：指定フォルダへ移動 ★★★
     const file = DriveApp.getFileById(newSS.getId());
     try {
       const folder = DriveApp.getFolderById(DESTINATION_FOLDER_ID);
       file.moveTo(folder);
-    } catch (e) {
-      // エラー時はルートに残る
-    }
-    // ★★★ ここまで ★★★
+    } catch (e) {}
 
     const newSheet = newSS.getSheetByName(TEMPLATE_SHEET_NAME);
     if (!newSheet) {
@@ -347,9 +340,11 @@ function processShipment(shipmentData) {
       newSheet.createTextFinder(key).replaceAllWith(value);
     }
     
+    const itemsToPrint = shipmentData.items.filter(item => !item.excludeFromSlip);
     const START_ROW = 14; 
     const TEMPLATE_ROWS = 20; 
-    shipmentData.items.forEach((item, index) => {
+    
+    itemsToPrint.forEach((item, index) => {
       if (index < TEMPLATE_ROWS) { 
         const currentRow = START_ROW + index;
         newSheet.getRange(currentRow, 1).setValue(item.shohinName); 
@@ -357,9 +352,9 @@ function processShipment(shipmentData) {
       }
     });
 
-    if (shipmentData.items.length < TEMPLATE_ROWS) {
-      const remainingRows = TEMPLATE_ROWS - shipmentData.items.length;
-      const remainingStartRow = START_ROW + shipmentData.items.length;
+    if (itemsToPrint.length < TEMPLATE_ROWS) {
+      const remainingRows = TEMPLATE_ROWS - itemsToPrint.length;
+      const remainingStartRow = START_ROW + itemsToPrint.length;
       newSheet.getRange(remainingStartRow, 1, remainingRows, 1).clearContent();
       newSheet.getRange(remainingStartRow, 16, remainingRows, 1).clearContent();
     }
