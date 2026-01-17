@@ -17,8 +17,14 @@
     
     .item-list { list-style: none; padding: 0; }
     .item { border-bottom: 1px solid #eee; padding: 15px 5px; }
-    .item-header { display: flex; align-items: center; font-weight: bold; }
-    .item-header input { margin-right: 15px; transform: scale(1.5); }
+    /* アイテムヘッダーをFlexboxで調整 */
+    .item-header { display: flex; align-items: center; justify-content: space-between; font-weight: bold; }
+    .item-left { display: flex; align-items: center; }
+    .item-left input { margin-right: 15px; transform: scale(1.5); }
+    /* 除外チェックボックスのスタイル */
+    .item-right { font-size: 0.8em; font-weight: normal; color: #d9534f; display: flex; align-items: center; }
+    .item-right input { margin-right: 5px; transform: scale(1.2); }
+
     .item-details { font-size: 0.9em; color: #666; margin-top: 5px; padding-left: 35px; }
     .item-details span { margin-right: 15px; }
     .ship-input { margin-top: 10px; padding-left: 35px; }
@@ -156,7 +162,7 @@
         senpoTantoshaName: data.senpoTantoshaName,
         chokusosakiName: data.chokusosakiName,
         chokusosakiName2: data.chokusosakiName2,
-        chokusosakiTantoshaName: data.chokusosakiTantoshaName, // ★追加
+        chokusosakiTantoshaName: data.chokusosakiTantoshaName,
         postalCode: data.postalCode,
         address1: data.address1,
         address2: data.address2,
@@ -174,7 +180,7 @@
       document.getElementById('senpo-tantosha').value = vals.senpoTantoshaName;
       document.getElementById('chokusosaki-name').value = vals.chokusosakiName;
       document.getElementById('chokusosaki-name2').value = vals.chokusosakiName2;
-      document.getElementById('chokusosaki-tantosha').value = vals.chokusosakiTantoshaName; // ★追加
+      document.getElementById('chokusosaki-tantosha').value = vals.chokusosakiTantoshaName;
       document.getElementById('postal-code').value = vals.postalCode;
       document.getElementById('address1').value = vals.address1;
       document.getElementById('address2').value = vals.address2;
@@ -207,10 +213,17 @@
         const isChecked = prevQty > 0;
         const inputVal = isChecked ? prevQty : limit;
 
+        // ★★★ 変更箇所：右側に除外チェックボックスを追加 ★★★
         li.innerHTML = `
           <div class="item-header">
-            <input type="checkbox" class="item-check" onchange="toggleInput(this)" ${isChecked ? 'checked' : ''}>
-            <strong>${item.shohinName}</strong>
+            <div class="item-left">
+              <input type="checkbox" class="item-check" onchange="toggleInput(this, 'main')" ${isChecked ? 'checked' : ''}>
+              <strong>${item.shohinName}</strong>
+            </div>
+            <div class="item-right">
+              <input type="checkbox" class="item-exclude-check" onchange="toggleInput(this, 'exclude')">
+              <label>伝票除外</label>
+            </div>
           </div>
           <div class="item-details">
             <span>受注: ${item.juchuSuryo}</span>
@@ -275,14 +288,26 @@
       }).getHistoryDetails(hist.slipId);
     }
 
-    function toggleInput(checkbox) {
+    // ★★★ 変更：排他制御ロジック ★★★
+    function toggleInput(checkbox, type) {
       const li = checkbox.closest('.item');
+      const mainCheck = li.querySelector('.item-check');
+      const excludeCheck = li.querySelector('.item-exclude-check');
       const input = li.querySelector('.item-quantity');
       const limit = li.dataset.limit;
       
-      if (checkbox.checked) {
+      // 排他制御：片方を選んだらもう片方を外す
+      if (type === 'main' && checkbox.checked) {
+        excludeCheck.checked = false;
+      } else if (type === 'exclude' && checkbox.checked) {
+        mainCheck.checked = false;
+      }
+
+      // どちらかがチェックされていれば入力欄有効
+      if (mainCheck.checked || excludeCheck.checked) {
         input.disabled = false;
-        input.value = limit;
+        // 値が空なら最大値を入れる
+        if (input.value === '') input.value = limit;
         input.focus();
       } else {
         input.disabled = true;
@@ -290,36 +315,53 @@
         input.classList.remove('input-error');
       }
     }
+    
     function toggleAll(main) {
-      document.querySelectorAll('.item-check').forEach(c => { c.checked = main.checked; toggleInput(c); });
+      document.querySelectorAll('.item-check').forEach(c => { 
+        c.checked = main.checked; 
+        // 全選択時は除外チェックを外す
+        if (main.checked) {
+          const li = c.closest('.item');
+          li.querySelector('.item-exclude-check').checked = false;
+        }
+        toggleInput(c, 'main'); 
+      });
     }
     
     function handleSubmit() {
-      const checks = document.querySelectorAll('.item-check:checked');
-      if(checks.length === 0) { alert('商品を選択してください'); return; }
-      
+      // メインか除外か、どちらかにチェックが入っているものを対象とする
       const items = [];
       let hasError = false;
-      checks.forEach(c => {
-        const li = c.closest('.item');
-        const input = li.querySelector('.item-quantity');
-        const val = parseInt(input.value);
-        const limit = parseInt(li.dataset.limit);
+      let checkedCount = 0;
+
+      document.querySelectorAll('.item').forEach(li => {
+        const mainCheck = li.querySelector('.item-check');
+        const excludeCheck = li.querySelector('.item-exclude-check');
         
-        input.classList.remove('input-error');
-        if(isNaN(val) || val <= 0) { alert('数量不正'); input.classList.add('input-error'); hasError=true; return; }
-        if(val > limit) { alert('数量オーバー'); input.classList.add('input-error'); hasError=true; return; }
-        
-        items.push({
-          meisaiNo: li.dataset.meisaiNo,
-          rowNum: li.dataset.rowNum,
-          shohinCode: li.dataset.shohinCode,
-          shohinName: li.dataset.shohinName,
-          shukkaSu: val,
-          prevQty: li.dataset.prevQty || 0
-        });
+        if (mainCheck.checked || excludeCheck.checked) {
+          checkedCount++;
+          const input = li.querySelector('.item-quantity');
+          const val = parseInt(input.value);
+          const limit = parseInt(li.dataset.limit);
+          
+          input.classList.remove('input-error');
+          if(isNaN(val) || val <= 0) { alert('数量不正'); input.classList.add('input-error'); hasError=true; return; }
+          if(val > limit) { alert('数量オーバー'); input.classList.add('input-error'); hasError=true; return; }
+          
+          items.push({
+            meisaiNo: li.dataset.meisaiNo,
+            rowNum: li.dataset.rowNum,
+            shohinCode: li.dataset.shohinCode,
+            shohinName: li.dataset.shohinName,
+            shukkaSu: val,
+            prevQty: li.dataset.prevQty || 0,
+            excludeFromSlip: excludeCheck.checked // ★除外フラグ
+          });
+        }
       });
-      if(hasError) return;
+
+      if (checkedCount === 0) { alert('商品を選択してください'); return; }
+      if (hasError) return;
       
       if(!confirm('出荷伝票を作成しますか？')) return;
       
@@ -333,7 +375,7 @@
         senpoTantoshaName: document.getElementById('senpo-tantosha').value,
         chokusosakiName: document.getElementById('chokusosaki-name').value,
         chokusosakiName2: document.getElementById('chokusosaki-name2').value,
-        chokusosakiTantoshaName: document.getElementById('chokusosaki-tantosha').value, // ★追加
+        chokusosakiTantoshaName: document.getElementById('chokusosaki-tantosha').value,
         postalCode: document.getElementById('postal-code').value,
         address1: document.getElementById('address1').value,
         address2: document.getElementById('address2').value,
