@@ -4,43 +4,100 @@
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; color: #333; }
-    h1 { font-size: 1.5em; color: #444; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    body { font-family: sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+    /* タイトルスタイル */
+    h1 { font-size: 1.4em; color: #444; margin: 0 0 15px 0; display:flex; align-items:center; justify-content: flex-start; gap: 10px; }
+    h1 span { border-bottom: 3px solid #007bff; padding-bottom: 5px; }
+    
+    /* タブデザイン */
+    .tab-container { display: flex; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
+    .tab-item { 
+      padding: 12px 25px; cursor: pointer; font-weight: bold; color: #666; 
+      border-radius: 8px 8px 0 0; background: #e9ecef; margin-right: 5px; border: 1px solid #ddd; border-bottom: none;
+      transition: all 0.2s;
+    }
+    .tab-item:hover { background: #dde2e6; }
+    .tab-item.active { background: #fff; color: #007bff; border-bottom: 2px solid #fff; margin-bottom: -2px; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* サブタブ (JSON用) */
+    .sub-tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+    .sub-tab-btn { padding: 6px 15px; border: 1px solid #007bff; background: #fff; color: #007bff; border-radius: 20px; cursor: pointer; font-size: 0.9em; white-space: nowrap; transition: 0.2s; }
+    .sub-tab-btn.active { background: #007bff; color: #fff; }
+
     .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; padding: 20px; }
     
     .form-group { margin-bottom: 10px; }
     .form-group label { font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.9em; color: #666; }
-    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+    .form-group input[type="text"], 
+    .form-group input[type="date"], 
+    .form-group select { 
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1em; height: 38px;
+      font-family: inherit;
+    }
+
+    /* レイアウト */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .shipment-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; }
+    .grid-tokuisaki-names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-1-8 { display: grid; grid-template-columns: 1fr 7fr; gap: 10px; }
+    .grid-1-8-x2 { display: grid; grid-template-columns: 1fr 1fr 6fr; gap: 10px; }
+    .grid-1-8-x3 { display: grid; grid-template-columns: 1fr 1fr 1fr 5fr; gap: 10px; }
     
+    /* 商品リスト */
     .item-list { list-style: none; padding: 0; }
     .item { border-bottom: 1px solid #eee; padding: 15px 5px; }
-    /* アイテムヘッダーをFlexboxで調整 */
     .item-header { display: flex; align-items: center; justify-content: space-between; font-weight: bold; }
     .item-left { display: flex; align-items: center; }
-    .item-left input { margin-right: 15px; transform: scale(1.5); }
-    /* 除外チェックボックスのスタイル */
-    .item-right { font-size: 0.8em; font-weight: normal; color: #d9534f; display: flex; align-items: center; }
-    .item-right input { margin-right: 5px; transform: scale(1.2); }
-
+    .item-left > input.item-check { margin-right: 15px; transform: scale(1.5); }
     .item-details { font-size: 0.9em; color: #666; margin-top: 5px; padding-left: 35px; }
     .item-details span { margin-right: 15px; }
     .ship-input { margin-top: 10px; padding-left: 35px; }
     .ship-input input { width: 100px; padding: 5px; }
     .input-error { border: 2px solid red !important; background-color: #ffe6e6; }
 
+    /* ボタン */
     .button { background-color: #007bff; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1.1em; margin-top: 10px; }
     .button:disabled { background-color: #aaa; }
+    .button-warning { background-color: #ffc107; color: #333; }
+    .button-danger { background-color: #dc3545; }
     .button-secondary { background-color: #6c757d; }
-    .button-info { background-color: #17a2b8; margin-bottom: 15px; }
+    .button-return { background-color: #6610f2; color: white; }
+    .button-copy { background-color: #17a2b8; color: white; } 
+    .button-success { background-color: #28a745; color: white; } 
 
-    #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; }
-    #modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto; border-radius: 8px; }
-    .history-item { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
-    .history-item:hover { background-color: #f0f8ff; }
+    /* モードヘッダー */
+    .edit-mode-header { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ffeeba; display: none; text-align: center; font-weight: bold; }
+    .copy-mode-header { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #bee5eb; display: none; text-align: center; font-weight: bold; }
+
+    /* 履歴画面スタイル */
+    .history-container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; height: 600px; }
+    @media (max-width: 768px) {
+      .history-container { grid-template-columns: 1fr; height: auto; }
+      .preview-area { height: 500px; }
+    }
+    .history-list-scroll { height: 100%; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background: #fff; }
+    .history-card { border-bottom: 1px solid #eee; padding: 15px; cursor: pointer; transition: 0.2s; }
+    .history-card:hover { background-color: #f0f8ff; }
+    .history-card.selected { background-color: #e6f7ff; border-left: 4px solid #007bff; }
+    .history-info { font-size: 0.9em; }
     
+    .preview-area { display: flex; flex-direction: column; border: 1px solid #ddd; border-radius: 5px; background: #fff; overflow: hidden; }
+    .preview-header { padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:5px; }
+    .preview-frame { flex-grow: 1; border: none; width: 100%; height: 100%; background: #eee; }
+    .preview-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: #999; text-align: center; padding: 20px; }
+
+    /* モーダル */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; }
+    .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; border-radius: 8px; }
+    
+    .return-header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+
+    /* 自由入力エリア */
+    .free-input-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .free-input-row input { font-size: 0.9em; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+
     #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 999; text-align: center; padding-top: 40vh; font-size: 1.2em; }
     #message-area { display: none; padding: 15px; border-radius: 5px; margin-top: 20px; }
     .success { background-color: #d4edda; color: #155724; }
@@ -49,78 +106,239 @@
 </head>
 <body>
 
-  <div id="main-content">
-    <div class="card">
-      <h1><span id="title-juchu-no"></span> の出荷処理</h1>
-      <button class="button button-info" onclick="showHistory()">📜 作成済みの出荷明細書を確認・修正する</button>
+  <!-- タブナビゲーション -->
+  <div class="tab-container">
+    <div class="tab-item active" onclick="switchTab('new')">📝 新規出荷作成</div>
+    <div class="tab-item" onclick="switchTab('edit')">📂 作成済伝票の確認・修正</div>
+  </div>
 
-      <div class="grid-2">
-        <div class="form-group"><label>得意先コード</label><input type="text" id="tokuisaki-code"></div>
-        <div class="form-group"><label>得意先名</label><input type="text" id="tokuisaki-name"></div>
-      </div>
-      <div class="form-group"><label>先方担当者名</label><input type="text" id="senpo-tantosha"></div>
-      <div class="grid-2">
-        <div class="form-group"><label>直送先名</label><input type="text" id="chokusosaki-name"></div>
-        <div class="form-group"><label>直送先名２</label><input type="text" id="chokusosaki-name2"></div>
-      </div>
-      <div class="form-group"><label>直送先担当者名</label><input type="text" id="chokusosaki-tantosha"></div>
+  <div id="main-content">
+    <h1><span id="title-juchu-no">...</span> の出荷処理</h1>
+    
+    <!-- タブ1: 入力フォーム (新規・修正兼用) -->
+    <div id="tab-new" class="tab-content active">
       
-      <div class="grid-3">
-        <div class="form-group"><label>郵便番号</label><input type="text" id="postal-code"></div>
+      <!-- 修正モード時の警告バー -->
+      <div id="edit-mode-bar" class="edit-mode-header">
+        ⚠️ 過去の伝票を修正中（元の伝票は削除され再作成されます）<br>
+        <button class="button button-secondary" type="button" onclick="exitEditMode()" style="width:auto; padding:5px 10px; margin-left:10px; font-size:0.9em;">修正をやめて新規作成に戻る</button>
+      </div>
+      <!-- 複製モード時の警告バー -->
+      <div id="copy-mode-bar" class="copy-mode-header">
+        📋 過去の伝票を複製中（イレギュラー出荷・在庫変動なし）<br>
+        受注Noを変更し、内容を修正してください。<br>
+        <button class="button button-secondary" type="button" onclick="exitCopyMode()" style="width:auto; padding:5px 10px; margin-left:10px; font-size:0.9em;">キャンセル</button>
+      </div>
+
+      <!-- JSON連携サブタブ -->
+      <div id="delivery-tabs" class="sub-tabs"></div>
+
+      <div class="card">
+        <!-- 作成者 -->
+        <div class="grid-2" style="margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 15px;">
+           <div class="form-group">
+             <label style="color:#007bff;">👤 作成者 (必須)</label>
+             <select id="creator-name" style="border-color:#007bff; background:#f0f8ff;">
+                <option value="">-- 選択してください --</option>
+             </select>
+           </div>
+           <div></div>
+        </div>
+
+        <!-- 得意先コード (1/8幅) -->
+        <div class="grid-1-8">
+          <div class="form-group"><label>得意先コード</label><input type="text" id="tokuisaki-code"></div>
+          <div class="grid-tokuisaki-names">
+             <div class="form-group"><label>得意先名</label><input type="text" id="tokuisaki-name"></div>
+             <div class="form-group"><label>得意先名２</label><input type="text" id="tokuisaki-name2"></div> 
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group"><label>先方担当者名</label><input type="text" id="senpo-tantosha"></div>
+          <div><!-- 余白 --></div>
+        </div>
+        
+        <div class="grid-2">
+          <div class="form-group"><label>直送先名</label><input type="text" id="chokusosaki-name"></div>
+          <div class="form-group"><label>直送先名２</label><input type="text" id="chokusosaki-name2"></div>
+        </div>
+        
+        <div class="grid-2">
+          <div class="form-group"><label>直送先担当者名</label><input type="text" id="chokusosaki-tantosha"></div>
+          <div><!-- 余白 --></div>
+        </div>
+        
+        <div class="grid-1-8-x2">
+          <div class="form-group"><label>郵便番号</label><input type="text" id="postal-code"></div>
+          <div class="form-group"><label>会社TEL</label><input type="text" id="kaisha-tel"></div>
+          <div><!-- 余白 --></div>
+        </div>
+
         <div class="form-group"><label>住所１</label><input type="text" id="address1"></div>
         <div class="form-group"><label>住所２</label><input type="text" id="address2"></div>
-      </div>
-      <div class="form-group"><label>会社TEL</label><input type="text" id="kaisha-tel"></div>
 
-      <div class="grid-2">
-        <div class="form-group"><label>FM情報No</label><input type="text" id="fm-info-no"></div>
-        <div class="form-group"><label>FM出荷No</label><input type="text" id="fm-shukka-no"></div>
+        <div class="grid-1-8-x2">
+          <div class="form-group"><label>FM情報No</label><input type="text" id="fm-info-no"></div>
+          <div class="form-group"><label>FM出荷No</label><input type="text" id="fm-shukka-no"></div>
+          <div><!-- 余白 --></div>
+        </div>
+
+        <div class="grid-1-8-x3" style="margin-top: 15px;">
+          <div class="form-group">
+             <label>出荷日</label>
+             <input type="date" id="shipping-date">
+          </div>
+          <div class="form-group">
+             <label>到着日</label>
+             <input type="date" id="arrival-date">
+          </div>
+          <div class="form-group">
+             <label>到着時刻</label>
+             <select id="arrival-time">
+               <option value="午前中">午前中</option>
+               <option value="14時～16時">14時～16時</option>
+               <option value="16時～18時">16時～18時</option>
+               <option value="18時以降">18時以降</option>
+               <option value="指定なし">指定なし</option>
+             </select>
+          </div>
+          <div><!-- 余白 --></div>
+        </div>
       </div>
 
-      <div class="shipment-options">
-        <div><label>出荷日</label><input type="date" id="shipping-date"></div>
-        <div><label>到着日</label><input type="date" id="arrival-date"></div>
-        <div><label>到着時刻</label>
-          <select id="arrival-time">
-            <option>午前中</option><option>14時～16時</option><option>16時～18時</option><option>18時以降</option><option>指定なし</option>
-          </select>
+      <div class="card">
+        <div class="select-all" style="padding:10px; background:#f0f0f0; margin-bottom:10px;">
+          <input type="checkbox" id="check-all" onchange="toggleAll(this)">
+          <label for="check-all">全選択</label>
+        </div>
+        <ul id="item-list-container" class="item-list"></ul>
+        
+        <!-- 自由入力エリア (複製モードのみ表示) -->
+        <div id="free-input-area" style="display:none; margin-top:20px; border-top:2px dashed #ddd; padding-top:15px;">
+          <div style="font-weight:bold; color:#17a2b8; margin-bottom:10px;">📋 自由入力欄（登録外の商品はこちら）</div>
+          <div style="font-size:0.8em; color:#666; margin-bottom:5px;">品名 / 数量 / シリアルNo を入力してください。</div>
+          <div id="free-item-container"></div>
+          <button class="button button-secondary" type="button" onclick="addFreeInputRow()" style="width:auto; font-size:0.9em; margin-top:10px;">＋ 自由入力行を追加</button>
+        </div>
+      </div>
+      
+      <!-- 保存ボタン -->
+      <button id="submit-button" class="button" type="button" onclick="handleSubmit()">出荷伝票を作成する</button>
+    </div>
+
+    <!-- タブ2: 履歴一覧 & プレビュー -->
+    <div id="tab-edit" class="tab-content">
+      <div class="card" style="padding:15px; margin-bottom:10px;">
+        <button class="button button-secondary" type="button" onclick="loadHistoryList()" style="width:auto; margin-top:0;">🔄 リストを更新</button>
+        <span style="margin-left:10px; font-size:0.9em; color:#666;">※プレビューが表示されない場合は「ファイルを開く」をご利用ください。</span>
+      </div>
+
+      <div class="history-container">
+        <!-- 左：リスト -->
+        <div class="history-list-scroll" id="history-list-area">
+          <div style="padding:20px; text-align:center;">読み込み中...</div>
+        </div>
+
+        <!-- 右：プレビュー -->
+        <div class="preview-area">
+          <div class="preview-header">
+            <strong id="preview-title">伝票プレビュー</strong>
+            <div style="display:flex; gap:5px;">
+              <a id="preview-link" href="#" target="_blank" style="margin-right:10px; display:none; align-self:center;">別タブで開く</a>
+              <!-- 各種ボタン -->
+              <button id="preview-confirm-btn" class="button button-success" type="button" style="width:auto; padding:5px 15px; margin:0; font-size:0.9em; display:none;">✅ 確認済にする</button>
+              <button id="preview-return-btn" class="button button-return" type="button" style="width:auto; padding:5px 15px; margin:0; font-size:0.9em; display:none;">↩️ 返品処理</button>
+              <button id="preview-copy-btn" class="button button-copy" type="button" style="width:auto; padding:5px 15px; margin:0; font-size:0.9em; display:none;">📋 複製</button>
+              <button id="preview-edit-btn" class="button button-warning" type="button" style="width:auto; padding:5px 15px; margin:0; font-size:0.9em; display:none;">🛠️ 修正</button>
+            </div>
+          </div>
+          <div id="preview-placeholder" class="preview-placeholder">
+            <div>左のリストから伝票を選択すると<br>ここにスプレッドシートが表示されます</div>
+          </div>
+          <iframe id="preview-frame" class="preview-frame" style="display:none;"></iframe>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="select-all" style="padding:10px; background:#f0f0f0; margin-bottom:10px;">
-        <input type="checkbox" id="check-all" onchange="toggleAll(this)">
-        <label for="check-all">全選択</label>
-      </div>
-      <ul id="item-list-container" class="item-list"></ul>
-    </div>
-    
-    <button id="submit-button" class="button" onclick="handleSubmit()">出荷伝票を作成する</button>
-    <div id="edit-mode-notice" style="display:none; text-align:center; color:red; margin-top:10px; font-weight:bold;">※修正モード（Ver2作成）です</div>
   </div>
   
-  <div id="message-area"></div>
-  <div id="loader"><p>受注伝票を読み込み中です...</p></div>
-
-  <div id="modal-overlay" onclick="closeModal()">
-    <div id="modal-content" onclick="event.stopPropagation()">
-      <h2>作成済み出荷明細書一覧</h2>
-      <div id="history-list">読み込み中...</div>
-      <button class="button button-secondary" onclick="closeModal()" style="margin-top:20px;">閉じる</button>
+  <!-- 確認者登録用モーダル -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+      <h3 style="color:#28a745; margin-top:0;">✅ 確認者の登録（プルダウン選択）</h3>
+      <p style="font-size:0.9em; color:#666;">明細書の「確認」欄に名前を追記します。</p>
+      <div class="form-group">
+        <label>確認者</label>
+        <select id="confirm-name-select"></select>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:20px;">
+        <button class="button button-secondary" type="button" style="width:48%;" onclick="closeConfirmModal()">キャンセル</button>
+        <button class="button button-success" type="button" style="width:48%;" onclick="submitConfirm()">実行する</button>
+      </div>
     </div>
   </div>
 
+  <!-- 返品用モーダル -->
+  <div id="return-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h2 style="border-bottom:2px solid #6610f2; padding-bottom:10px; margin-top:0; color:#6610f2;">↩️ 返品処理</h2>
+      
+      <div class="return-header-grid">
+        <div class="form-group"><label>入荷日</label><input type="date" id="return-date"></div>
+        <div class="form-group"><label>完了日</label><input type="date" id="return-complete-date"></div>
+        <div class="form-group"><label>返品依頼No</label><input type="text" id="return-req-no" placeholder="手入力"></div>
+        <div class="form-group">
+          <label>送料負担</label>
+          <select id="return-ship-type"><option value="元払い">元払い</option><option value="着払い">着払い</option></select>
+        </div>
+        <div class="form-group" style="grid-column: span 2;"><label>送料金額 (着払い時)</label><input type="text" id="return-ship-cost" placeholder="円"></div>
+      </div>
+
+      <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:15px;">
+        <label style="font-weight:bold;">返品する商品と数量</label>
+        <ul id="return-item-list" class="item-list"></ul>
+      </div>
+
+      <div style="display:flex; justify-content:space-between;">
+        <button class="button button-secondary" type="button" style="width:48%;" onclick="closeReturnModal()">キャンセル</button>
+        <button class="button button-return" type="button" style="width:48%;" onclick="submitReturn()">返品を実行</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="message-area"></div>
+  <div id="loader"><p>データを読み込み中です...</p></div>
+
   <script>
-    let currentJuchuNo = "<?= juchuNo ?>";
-    let gData = {};
-    let editingSlipId = null;
-    let currentTokuisakiName2 = ''; 
+    const initialJuchuNo = "<?= juchuNo ?>";
+    const initialSlipId = "<?= initialSlipId ?>"; 
+    const initialTab = "<?= initialTab ?>";
+    const APP_URL = "<?= ScriptApp.getService().getUrl() ?>";
+
+    let gData = {}; 
+    let editingSlipId = null; 
+    let isEditMode = false; 
+    let isCopyMode = false;
+    let currentReturnSlipId = null; 
+    let currentConfirmSlipId = null; 
+    
+    // JSON連携用
+    let currentDeliveryIndex = 0; 
 
     window.onload = function() {
+      if (initialSlipId) {
+        startEditDirectly(initialSlipId);
+      } else {
+        loadMasterData(initialJuchuNo);
+        if (initialTab === 'edit') {
+            switchTab('edit');
+        }
+      }
       setTodayToDateInput('shipping-date');
       setTodayToDateInput('arrival-date');
-      runDataFetch();
+      setTodayToDateInput('return-date');
+      setTodayToDateInput('return-complete-date');
     };
 
     function setTodayToDateInput(id) {
@@ -129,54 +347,356 @@
       document.getElementById(id).value = d.toISOString().split('T')[0];
     }
 
-    function runDataFetch() {
-      document.getElementById('loader').innerHTML = '<p>受注伝票を読み込み中です。<br>しばらくお待ちください。</p>';
-      showLoader(true);
-      document.getElementById('message-area').style.display = 'none';
-      document.getElementById('main-content').style.display = 'block';
-      document.getElementById('submit-button').innerText = '出荷伝票を作成する';
-      document.getElementById('submit-button').disabled = false;
-      document.getElementById('edit-mode-notice').style.display = 'none';
-      
-      editingSlipId = null;
-      setTodayToDateInput('shipping-date');
-      setTodayToDateInput('arrival-date');
-
-      google.script.run
-        .withSuccessHandler(initData)
-        .withFailureHandler(showError)
-        .getSalesOrderData(currentJuchuNo);
+    function formatDateForInput(dateStr) {
+      if (!dateStr) return '';
+      return dateStr.replace(/\//g, '-');
     }
 
-    function initData(data) {
+    function loadMasterData(juchuNo) {
+      showLoader(true, '受注データを読み込んでいます...');
+      google.script.run
+        .withSuccessHandler(initMasterData)
+        .withFailureHandler(showError)
+        .getSalesOrderData(juchuNo);
+    }
+
+    function startEditDirectly(slipId) {
+      showLoader(true, '指定された伝票を読み込んでいます...');
+      google.script.run
+        .withSuccessHandler((data) => {
+           if(data.status==='error'){ showError(data.message); return; }
+           initMasterData(data);
+           switchTab('edit');
+        })
+        .withFailureHandler(showError)
+        .getSalesOrderData(null, slipId);
+    }
+
+    function initMasterData(data) {
       showLoader(false);
       if(data.status === 'error') { showError(data.message); return; }
       gData = data;
-      
-      currentTokuisakiName2 = data.tokuisakiName2;
-
       document.getElementById('title-juchu-no').innerText = data.juchuNo;
-      setFormValues({
-        tokuisakiCode: data.tokuisakiCode,
-        tokuisakiName: data.tokuisakiName,
-        senpoTantoshaName: data.senpoTantoshaName,
-        chokusosakiName: data.chokusosakiName,
-        chokusosakiName2: data.chokusosakiName2,
-        chokusosakiTantoshaName: data.chokusosakiTantoshaName,
-        postalCode: data.postalCode,
-        address1: data.address1,
-        address2: data.address2,
-        kaishaTel: data.kaishaTel,
-        fmInfoNo: data.fmInfoNo,
-        fmShukkaNo: data.fmShukkaNo
-      });
       
+      // 作成者・確認者プルダウンの生成
+      const creatorSelect = document.getElementById('creator-name');
+      const confirmSelect = document.getElementById('confirm-name-select');
+      creatorSelect.innerHTML = '<option value="">-- 選択してください --</option>';
+      confirmSelect.innerHTML = '<option value="">-- 選択してください --</option>';
+      
+      if (data.creatorList) {
+        data.creatorList.forEach(name => {
+          creatorSelect.innerHTML += `<option value="${name}">${name}</option>`;
+          confirmSelect.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+      }
+
+      setFormValues(data);
       renderItemList(data.meisaiList);
+      renderDeliveryTabs();
+      loadHistoryList();
+    }
+
+    // --- JSON連携のサブタブ処理 ---
+    function renderDeliveryTabs() {
+      const tabContainer = document.getElementById('delivery-tabs');
+      tabContainer.innerHTML = '';
+      currentDeliveryIndex = 0; 
+
+      if (!gData.deliveryList || gData.deliveryList.length === 0) {
+         gData.deliveryList = [{}];
+      }
+
+      gData.deliveryList.forEach((deliv, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button'; 
+        btn.className = `sub-tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.innerText = `${index + 1}回目`;
+        btn.onclick = () => selectDeliveryTab(index);
+        tabContainer.appendChild(btn);
+      });
+
+      applyDeliveryDataToForm(0);
+    }
+
+    // ★追加: 修正モード中は対象以外のタブをロックする関数
+    function lockDeliveryTabs() {
+      document.querySelectorAll('.sub-tab-btn').forEach((btn, i) => {
+        if (i !== currentDeliveryIndex) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+        }
+      });
+    }
+
+    // ★追加: タブのロックを解除する関数
+    function unlockDeliveryTabs() {
+      document.querySelectorAll('.sub-tab-btn').forEach((btn) => {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      });
+    }
+
+    function selectDeliveryTab(index) {
+      saveFormToDeliveryData(currentDeliveryIndex);
+      currentDeliveryIndex = index;
+      document.querySelectorAll('.sub-tab-btn').forEach((btn, i) => {
+        btn.className = `sub-tab-btn ${i === index ? 'active' : ''}`;
+      });
+      applyDeliveryDataToForm(index);
+    }
+
+    function applyDeliveryDataToForm(index) {
+      if (!gData.deliveryList || !gData.deliveryList[index]) return;
+      const d = gData.deliveryList[index];
+      
+      document.getElementById('fm-info-no').value = d.informationNo || '';
+      document.getElementById('fm-shukka-no').value = d.shippingNo || '';
+      if (d.shipDate) document.getElementById('shipping-date').value = formatDateForInput(d.shipDate);
+      if (d.deliveryDate) document.getElementById('arrival-date').value = formatDateForInput(d.deliveryDate);
+      
+      const timeSelect = document.getElementById('arrival-time');
+      if (d.deliveryTime) {
+         let found = false;
+         for (let i=0; i<timeSelect.options.length; i++) {
+            if (timeSelect.options[i].value === d.deliveryTime) {
+                timeSelect.selectedIndex = i;
+                found = true; break;
+            }
+         }
+         if (!found) {
+            const opt = document.createElement('option');
+            opt.value = d.deliveryTime; opt.text = d.deliveryTime;
+            timeSelect.add(opt);
+            timeSelect.value = d.deliveryTime;
+         }
+      }
+    }
+
+    function saveFormToDeliveryData(index) {
+      if (!gData.deliveryList || !gData.deliveryList[index]) return;
+      gData.deliveryList[index].informationNo = document.getElementById('fm-info-no').value;
+      gData.deliveryList[index].shippingNo = document.getElementById('fm-shukka-no').value;
+      gData.deliveryList[index].shipDate = document.getElementById('shipping-date').value.replace(/-/g, '/');
+      gData.deliveryList[index].deliveryDate = document.getElementById('arrival-date').value.replace(/-/g, '/');
+      gData.deliveryList[index].deliveryTime = document.getElementById('arrival-time').value;
+    }
+    // -------------------------------------
+
+    function loadHistoryList() {
+      const area = document.getElementById('history-list-area');
+      area.innerHTML = '<div style="padding:20px; text-align:center;">読み込み中...</div>';
+      google.script.run.withSuccessHandler(renderHistoryList).getShipmentHistoryList(gData.juchuNo);
+    }
+
+    function renderHistoryList(res) {
+      const area = document.getElementById('history-list-area');
+      area.innerHTML = '';
+      if(!res.historyList || res.historyList.length === 0) {
+        area.innerHTML = '<div style="padding:20px; text-align:center;">作成済みの伝票はありません。</div>';
+        return;
+      }
+      let targetHist = null;
+      res.historyList.forEach(h => {
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.dataset.slipId = h.slipId; 
+        
+        let tabBadge = '';
+        if (h.targetTabIndex !== '' && h.targetTabIndex !== null) {
+          tabBadge = `<span style="background:#e9ecef; border-radius:3px; padding:2px 5px; font-size:0.8em; margin-right:5px;">${parseInt(h.targetTabIndex)+1}回目</span>`;
+        }
+
+        card.innerHTML = `
+          <div class="history-info">
+            <div style="margin-bottom:3px;">${tabBadge}<strong>${h.shippingDate} 出荷</strong></div>
+            <span style="color:#666;">作成: ${h.timestampStr}</span><br>
+            <span style="font-size:0.85em; color:#007bff;">${h.tokuisakiName}</span>
+          </div>
+        `;
+        card.onclick = () => {
+          document.querySelectorAll('.history-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          showPreview(h);
+        };
+        area.appendChild(card);
+        if (initialSlipId && String(h.slipId) === String(initialSlipId)) {
+          targetHist = { card: card, data: h };
+        }
+      });
+      if (targetHist) targetHist.card.click();
+    }
+
+    function showPreview(h) {
+      document.getElementById('preview-placeholder').style.display = 'none';
+      const iframe = document.getElementById('preview-frame');
+      iframe.style.display = 'block';
+      let url = h.fileUrl;
+      if (url.includes('/edit')) url = url.split('/edit')[0] + '/preview';
+      else url += '/preview';
+      iframe.src = url;
+
+      document.getElementById('preview-title').innerText = `${h.shippingDate} の出荷伝票`;
+      
+      const link = document.getElementById('preview-link');
+      link.style.display = 'inline';
+      link.href = h.fileUrl;
+
+      document.getElementById('preview-edit-btn').style.display = 'inline-block';
+      document.getElementById('preview-edit-btn').onclick = () => {
+        if(!confirm('この伝票を修正しますか？\n★元の伝票ファイルは削除され、上書き再作成されます。')) return;
+        loadHistoryDetail(h.slipId, 'edit', h.targetTabIndex);
+      };
+
+      document.getElementById('preview-copy-btn').style.display = 'inline-block';
+      document.getElementById('preview-copy-btn').onclick = () => {
+        if(!confirm('この伝票を複製して新規作成しますか？\n在庫は変動しません。受注Noなどを変更できます。')) return;
+        loadHistoryDetail(h.slipId, 'copy', h.targetTabIndex);
+      };
+
+      document.getElementById('preview-return-btn').style.display = 'inline-block';
+      document.getElementById('preview-return-btn').onclick = () => {
+        openReturnModal(h.slipId);
+      };
+      
+      document.getElementById('preview-confirm-btn').style.display = 'inline-block';
+      document.getElementById('preview-confirm-btn').onclick = () => {
+        openConfirmModal(h.slipId);
+      };
+    }
+
+    function loadHistoryDetail(slipId, mode, targetTabIndex) {
+      showLoader(true, '伝票データを復元中...');
+      google.script.run.withSuccessHandler(detailsRes => {
+         if(detailsRes.status === 'error') { showError('明細データの取得に失敗しました: ' + detailsRes.message); return; }
+         google.script.run.withSuccessHandler(listRes => {
+            showLoader(false);
+            if(listRes.status === 'error') { showError('リストデータの取得に失敗しました: ' + listRes.message); return; }
+            const hist = listRes.historyList.find(h => String(h.slipId) === String(slipId));
+            if(!hist) { alert('履歴データが見つかりません'); return; }
+
+            if (mode === 'edit') enterEditMode(slipId);
+            else if (mode === 'copy') enterCopyMode(slipId);
+
+            setFormValues(hist);
+            
+            // ★修正: 履歴から復元する際は、JSONデータを上書きしないように見た目とインデックスのみ変更
+            if ((mode === 'edit' || mode === 'copy') && targetTabIndex !== '' && targetTabIndex !== null) {
+               currentDeliveryIndex = parseInt(targetTabIndex, 10);
+               document.querySelectorAll('.sub-tab-btn').forEach((btn, i) => {
+                 btn.className = `sub-tab-btn ${i === currentDeliveryIndex ? 'active' : ''}`;
+               });
+            }
+
+            // ★追加: 修正・複製モード中は対象以外のタブを触れないようにロック
+            if (mode === 'edit' || mode === 'copy') {
+               lockDeliveryTabs();
+            }
+
+            if (mode === 'copy') {
+               setTodayToDateInput('shipping-date');
+               setTodayToDateInput('arrival-date');
+            } else {
+               document.getElementById('shipping-date').value = hist.shippingDate;
+               document.getElementById('arrival-date').value = hist.arrivalDate;
+            }
+            document.getElementById('arrival-time').value = hist.arrivalTime;
+            document.getElementById('creator-name').value = hist.creatorName || '';
+
+            renderItemList(gData.meisaiList, detailsRes.details);
+         }).getShipmentHistoryList(gData.juchuNo);
+      }).getHistoryDetails(slipId);
+    }
+
+    function switchTab(tabName) {
+      document.getElementById('main-content').style.display = 'block';
+      document.getElementById('message-area').style.display = 'none';
+
+      document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      if(tabName === 'new') {
+        document.querySelectorAll('.tab-item')[0].classList.add('active');
+        document.getElementById('tab-new').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-item')[1].classList.add('active');
+        document.getElementById('tab-edit').classList.add('active');
+        loadHistoryList();
+      }
+    }
+
+    function enterEditMode(slipId) {
+      isEditMode = true; isCopyMode = false; editingSlipId = slipId;
+      document.getElementById('edit-mode-bar').style.display = 'block';
+      document.getElementById('copy-mode-bar').style.display = 'none';
+      document.getElementById('free-input-area').style.display = 'none';
+      const btn = document.getElementById('submit-button');
+      btn.innerText = '⚠️ 出荷明細書を再作成（上書き保存）する';
+      btn.className = 'button button-danger';
+      switchTab('new'); window.scrollTo(0,0);
+    }
+
+    function enterCopyMode(slipId) {
+      isEditMode = false; isCopyMode = true; editingSlipId = null;
+      const titleSpan = document.getElementById('title-juchu-no');
+      titleSpan.innerHTML = `<input type="text" id="input-juchu-no" value="${gData.juchuNo}" style="font-size:1em; padding:5px; width:200px; color:#007bff; font-weight:bold;">`;
+      document.getElementById('copy-mode-bar').style.display = 'block';
+      document.getElementById('edit-mode-bar').style.display = 'none';
+      document.getElementById('free-input-area').style.display = 'block';
+      document.getElementById('free-item-container').innerHTML = ''; 
+      const btn = document.getElementById('submit-button');
+      btn.innerText = 'イレギュラー出荷伝票を作成する（在庫変動なし）';
+      btn.className = 'button button-copy';
+      switchTab('new'); window.scrollTo(0,0);
+    }
+
+    function exitEditMode() {
+      if(!confirm('修正を破棄して新規作成に戻りますか？')) return;
+      resetToNormalMode();
+    }
+    function exitCopyMode() {
+      if(!confirm('複製をキャンセルして通常の新規作成に戻りますか？')) return;
+      resetToNormalMode();
+    }
+    function resetToNormalMode() {
+      isEditMode = false; isCopyMode = false; editingSlipId = null;
+      document.getElementById('edit-mode-bar').style.display = 'none';
+      document.getElementById('copy-mode-bar').style.display = 'none';
+      document.getElementById('free-input-area').style.display = 'none';
+      const btn = document.getElementById('submit-button');
+      btn.innerText = '出荷伝票を作成する';
+      btn.className = 'button';
+      document.getElementById('title-juchu-no').innerText = gData.juchuNo;
+      document.getElementById('creator-name').value = '';
+      
+      setTodayToDateInput('shipping-date');
+      setTodayToDateInput('arrival-date');
+      setFormValues(gData);
+      renderItemList(gData.meisaiList);
+      
+      // ★追加: ロックを解除して1回目に戻す
+      unlockDeliveryTabs();
+      selectDeliveryTab(0); 
+    }
+
+    function addFreeInputRow() {
+      const container = document.getElementById('free-item-container');
+      const div = document.createElement('div');
+      div.className = 'free-input-row';
+      div.innerHTML = `
+        <input type="text" class="free-name" placeholder="品名" style="flex-grow:2;">
+        <input type="number" class="free-qty" placeholder="数" style="width:60px;">
+        <input type="text" class="free-serial" placeholder="シリアルNo" style="flex-grow:1;">
+        <button class="button button-danger" type="button" style="width:auto; padding:2px 8px; font-size:0.8em;" onclick="this.parentElement.remove()">削除</button>
+      `;
+      container.appendChild(div);
     }
 
     function setFormValues(vals) {
       document.getElementById('tokuisaki-code').value = vals.tokuisakiCode;
       document.getElementById('tokuisaki-name').value = vals.tokuisakiName;
+      document.getElementById('tokuisaki-name2').value = vals.tokuisakiName2 || ''; 
       document.getElementById('senpo-tantosha').value = vals.senpoTantoshaName;
       document.getElementById('chokusosaki-name').value = vals.chokusosakiName;
       document.getElementById('chokusosaki-name2').value = vals.chokusosakiName2;
@@ -185,11 +705,11 @@
       document.getElementById('address1').value = vals.address1;
       document.getElementById('address2').value = vals.address2;
       document.getElementById('kaisha-tel').value = vals.kaishaTel;
-      document.getElementById('fm-info-no').value = vals.fmInfoNo;
-      document.getElementById('fm-shukka-no').value = vals.fmShukkaNo;
+      document.getElementById('fm-info-no').value = vals.fmInfoNo || '';
+      document.getElementById('fm-shukka-no').value = vals.fmShukkaNo || '';
     }
 
-    function renderItemList(list, prevQuantities = {}) {
+    function renderItemList(list, quantityMap = {}) {
       const container = document.getElementById('item-list-container');
       container.innerHTML = '';
       document.getElementById('check-all').checked = false;
@@ -198,117 +718,72 @@
         const li = document.createElement('li');
         li.className = 'item';
         
-        const prevQty = prevQuantities[String(item.meisaiNo)] || 0;
-        const kano = Number(item.shukkaKanoSuryo);
-        const limit = kano + Number(prevQty);
+        let savedQty = 0;
+        const targetKey = String(item.meisaiNo).trim();
+        if (quantityMap.hasOwnProperty(targetKey)) {
+            savedQty = quantityMap[targetKey];
+        } else {
+            for (const k in quantityMap) {
+                if (String(k).trim() === targetKey) { savedQty = quantityMap[k]; break; }
+            }
+        }
+        
+        const dbZumi = Number(item.shukkaZumiSuryo);
+        const juchu = Number(item.juchuSuryo);
+        const currentKano = juchu - dbZumi;
+        
+        let limit;
+        if (isEditMode) limit = currentKano + savedQty;
+        else if (isCopyMode) limit = 9999; 
+        else limit = currentKano;
 
         li.dataset.meisaiNo = item.meisaiNo;
         li.dataset.rowNum = item.rowNum;
         li.dataset.shohinCode = item.shohinCode;
         li.dataset.shohinName = item.shohinName;
-        li.dataset.kanoSuryo = kano; 
-        li.dataset.prevQty = prevQty;
         li.dataset.limit = limit;
 
-        const isChecked = prevQty > 0;
-        const inputVal = isChecked ? prevQty : limit;
+        const isChecked = savedQty > 0;
+        const isDisabled = limit <= 0;
 
-        // ★★★ 変更箇所：右側に除外チェックボックスを追加 ★★★
         li.innerHTML = `
           <div class="item-header">
             <div class="item-left">
-              <input type="checkbox" class="item-check" onchange="toggleInput(this, 'main')" ${isChecked ? 'checked' : ''}>
+              <div class="exclude-wrapper" style="position: relative; margin-right: 15px; display: flex; align-items: center;">
+                  <input type="checkbox" class="item-exclude-check" onchange="toggleInput(this, 'exclude')" style="transform: scale(1.5);" ${isDisabled ? 'disabled' : ''}>
+                  <label style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-size: 0.7em; color: #d9534f; margin:0; width: max-content;">除外</label>
+              </div>
+              <input type="checkbox" class="item-check" onchange="toggleInput(this, 'main')" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
               <strong>${item.shohinName}</strong>
-            </div>
-            <div class="item-right">
-              <input type="checkbox" class="item-exclude-check" onchange="toggleInput(this, 'exclude')">
-              <label>伝票除外</label>
             </div>
           </div>
           <div class="item-details">
-            <span>受注: ${item.juchuSuryo}</span>
-            <span>済: ${item.shukkaZumiSuryo}</span>
-            <span><strong>残: ${kano}</strong></span>
-            ${prevQty > 0 ? `<span style="color:blue;">(前回: ${prevQty})</span>` : ''}
+            <span>受注: ${juchu}</span>
+            <span>済: ${dbZumi}</span>
+            <span><strong>残: ${currentKano}</strong></span>
+            ${isEditMode && savedQty > 0 ? `<span style="color:#007bff; font-weight:bold;">(保存済: ${savedQty})</span>` : ''}
           </div>
           <div class="ship-input">
             <label>今回数 (Max:${limit}):</label>
-            <input type="number" class="item-quantity" 
-              value="${isChecked ? inputVal : ''}" 
-              max="${limit}" min="0"
-              ${isChecked ? '' : 'disabled'}>
+            <input type="number" class="item-quantity" value="${isChecked ? savedQty : ''}" max="${limit}" min="0" ${isChecked ? '' : 'disabled'}>
           </div>
         `;
         container.appendChild(li);
       });
     }
 
-    function showHistory() {
-      document.getElementById('modal-overlay').style.display = 'block';
-      document.getElementById('history-list').innerHTML = '読み込み中...';
-      google.script.run.withSuccessHandler(renderHistory).getShipmentHistoryList(currentJuchuNo);
-    }
-    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-    
-    function renderHistory(res) {
-      const listDiv = document.getElementById('history-list');
-      listDiv.innerHTML = '';
-      if(!res.historyList || res.historyList.length === 0) {
-        listDiv.innerHTML = '<p>履歴はありません。</p>';
-        return;
-      }
-      res.historyList.forEach(h => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-        div.innerHTML = `
-          <strong>${h.timestampStr}</strong> 作成<br>
-          出荷: ${h.shippingDate} <a href="${h.fileUrl}" target="_blank" onclick="event.stopPropagation()">[ファイル]</a>
-        `;
-        div.onclick = () => loadHistory(h);
-        listDiv.appendChild(div);
-      });
-    }
-
-    function loadHistory(hist) {
-      if(!confirm('この伝票を修正しますか？\n(現在の入力は破棄されます)')) return;
-      closeModal();
-      showLoader(true, 'データを復元中...');
-      
-      editingSlipId = hist.slipId;
-      setFormValues(hist);
-      document.getElementById('shipping-date').value = hist.shippingDate;
-      document.getElementById('arrival-date').value = hist.arrivalDate;
-      document.getElementById('arrival-time').value = hist.arrivalTime;
-      
-      google.script.run.withSuccessHandler(res => {
-        showLoader(false);
-        renderItemList(gData.meisaiList, res.details);
-        document.getElementById('submit-button').innerText = '修正して Ver2 を作成する';
-        document.getElementById('edit-mode-notice').style.display = 'block';
-      }).getHistoryDetails(hist.slipId);
-    }
-
-    // ★★★ 変更：排他制御ロジック ★★★
     function toggleInput(checkbox, type) {
       const li = checkbox.closest('.item');
       const mainCheck = li.querySelector('.item-check');
       const excludeCheck = li.querySelector('.item-exclude-check');
       const input = li.querySelector('.item-quantity');
       const limit = li.dataset.limit;
+      if (type === 'main' && checkbox.checked) excludeCheck.checked = false;
+      else if (type === 'exclude' && checkbox.checked) mainCheck.checked = false;
       
-      // 排他制御：片方を選んだらもう片方を外す
-      if (type === 'main' && checkbox.checked) {
-        excludeCheck.checked = false;
-      } else if (type === 'exclude' && checkbox.checked) {
-        mainCheck.checked = false;
-      }
-
-      // どちらかがチェックされていれば入力欄有効
       if (mainCheck.checked || excludeCheck.checked) {
         input.disabled = false;
-        // 値が空なら最大値を入れる
-        if (input.value === '') input.value = limit;
-        input.focus();
+        if (input.value === '' || input.value === '0') input.value = limit > 999 ? '' : limit;
       } else {
         input.disabled = true;
         input.value = '';
@@ -318,98 +793,144 @@
     
     function toggleAll(main) {
       document.querySelectorAll('.item-check').forEach(c => { 
-        c.checked = main.checked; 
-        // 全選択時は除外チェックを外す
-        if (main.checked) {
-          const li = c.closest('.item');
-          li.querySelector('.item-exclude-check').checked = false;
+        if(!c.disabled) { 
+          c.checked = main.checked; 
+          if(main.checked) c.closest('.item').querySelector('.item-exclude-check').checked = false;
+          toggleInput(c, 'main'); 
         }
-        toggleInput(c, 'main'); 
       });
     }
-    
-    function handleSubmit() {
-      // メインか除外か、どちらかにチェックが入っているものを対象とする
-      const items = [];
-      let hasError = false;
-      let checkedCount = 0;
 
-      document.querySelectorAll('.item').forEach(li => {
-        const mainCheck = li.querySelector('.item-check');
-        const excludeCheck = li.querySelector('.item-exclude-check');
-        
-        if (mainCheck.checked || excludeCheck.checked) {
-          checkedCount++;
-          const input = li.querySelector('.item-quantity');
-          const val = parseInt(input.value);
-          const limit = parseInt(li.dataset.limit);
-          
-          input.classList.remove('input-error');
-          if(isNaN(val) || val <= 0) { alert('数量不正'); input.classList.add('input-error'); hasError=true; return; }
-          if(val > limit) { alert('数量オーバー'); input.classList.add('input-error'); hasError=true; return; }
-          
-          items.push({
-            meisaiNo: li.dataset.meisaiNo,
-            rowNum: li.dataset.rowNum,
-            shohinCode: li.dataset.shohinCode,
-            shohinName: li.dataset.shohinName,
-            shukkaSu: val,
-            prevQty: li.dataset.prevQty || 0,
-            excludeFromSlip: excludeCheck.checked // ★除外フラグ
+    function handleSubmit() {
+      try {
+        const creatorName = document.getElementById('creator-name').value;
+        if (!creatorName) { alert('作成者を選択してください。'); return; }
+
+        const items = [];
+        let hasError = false;
+        let checkedCount = 0;
+
+        document.querySelectorAll('#item-list-container .item').forEach(li => {
+          const mainCheck = li.querySelector('.item-check');
+          const excludeCheck = li.querySelector('.item-exclude-check');
+          if (mainCheck.checked || excludeCheck.checked) {
+            checkedCount++;
+            const input = li.querySelector('.item-quantity');
+            const val = parseInt(input.value);
+            const limit = parseInt(li.dataset.limit);
+            input.classList.remove('input-error');
+            if(isNaN(val) || val < 0) { alert('数量不正'); input.classList.add('input-error'); hasError=true; return; }
+            if(val > limit) { alert('数量オーバー'); input.classList.add('input-error'); hasError=true; return; }
+            items.push({
+              meisaiNo: li.dataset.meisaiNo,
+              rowNum: li.dataset.rowNum,
+              shohinCode: li.dataset.shohinCode,
+              shohinName: li.dataset.shohinName,
+              shukkaSu: val,
+              excludeFromSlip: excludeCheck.checked 
+            });
+          }
+        });
+
+        if (isCopyMode) {
+          document.querySelectorAll('#free-item-container .free-input-row').forEach(row => {
+            const name = row.querySelector('.free-name').value;
+            const qty = parseInt(row.querySelector('.free-qty').value);
+            const serial = row.querySelector('.free-serial').value;
+            if (name && qty > 0) {
+              checkedCount++;
+              items.push({
+                meisaiNo: null, 
+                shohinCode: '',
+                shohinName: name,
+                shukkaSu: qty,
+                serialNo: serial,
+                isFreeInput: true,
+                excludeFromSlip: false
+              });
+            }
           });
         }
-      });
 
-      if (checkedCount === 0) { alert('商品を選択してください'); return; }
-      if (hasError) return;
-      
-      if(!confirm('出荷伝票を作成しますか？')) return;
-      
-      const sendData = {
-        juchuNo: currentJuchuNo,
-        originalSlipId: editingSlipId,
+        if (checkedCount === 0) { alert('商品を選択してください'); return; }
+        if (hasError) return;
         
-        tokuisakiCode: document.getElementById('tokuisaki-code').value,
-        tokuisakiName: document.getElementById('tokuisaki-name').value,
-        tokuisakiName2: currentTokuisakiName2, 
-        senpoTantoshaName: document.getElementById('senpo-tantosha').value,
-        chokusosakiName: document.getElementById('chokusosaki-name').value,
-        chokusosakiName2: document.getElementById('chokusosaki-name2').value,
-        chokusosakiTantoshaName: document.getElementById('chokusosaki-tantosha').value,
-        postalCode: document.getElementById('postal-code').value,
-        address1: document.getElementById('address1').value,
-        address2: document.getElementById('address2').value,
-        kaishaTel: document.getElementById('kaisha-tel').value,
-        fmInfoNo: document.getElementById('fm-info-no').value, 
-        fmShukkaNo: document.getElementById('fm-shukka-no').value, 
+        let confirmMsg = '出荷伝票を作成しますか？';
+        if (isEditMode) confirmMsg = '⚠️ 元の伝票を削除し、内容を上書き再作成します。\nよろしいですか？';
+        if (isCopyMode) confirmMsg = '📋 在庫を変動させずに伝票を作成します。\nよろしいですか？';
+
+        if(!confirm(confirmMsg)) return;
         
-        shippingDate: document.getElementById('shipping-date').value,
-        arrivalDate: document.getElementById('arrival-date').value,
-        arrivalTime: document.getElementById('arrival-time').value,
+        let finalJuchuNo = gData.juchuNo;
+        if (isCopyMode) {
+          const inputJ = document.getElementById('input-juchu-no');
+          if (inputJ) finalJuchuNo = inputJ.value;
+        }
+
+        saveFormToDeliveryData(currentDeliveryIndex);
+
+        const sendData = {
+          juchuNo: gData.juchuNo, 
+          newJuchuNo: finalJuchuNo, 
+          originalSlipId: editingSlipId, 
+          isIrregular: isCopyMode, 
+          creatorName: creatorName, 
+          targetTabIndex: isCopyMode ? null : currentDeliveryIndex, 
+          deliveryList: gData.deliveryList, 
+
+          tokuisakiCode: document.getElementById('tokuisaki-code').value,
+          tokuisakiName: document.getElementById('tokuisaki-name').value,
+          tokuisakiName2: document.getElementById('tokuisaki-name2').value,
+          senpoTantoshaName: document.getElementById('senpo-tantosha').value,
+          chokusosakiName: document.getElementById('chokusosaki-name').value,
+          chokusosakiName2: document.getElementById('chokusosaki-name2').value,
+          chokusosakiTantoshaName: document.getElementById('chokusosaki-tantosha').value,
+          postalCode: document.getElementById('postal-code').value,
+          address1: document.getElementById('address1').value,
+          address2: document.getElementById('address2').value,
+          kaishaTel: document.getElementById('kaisha-tel').value,
+          fmInfoNo: document.getElementById('fm-info-no').value, 
+          fmShukkaNo: document.getElementById('fm-shukka-no').value, 
+          shippingDate: document.getElementById('shipping-date').value,
+          arrivalDate: document.getElementById('arrival-date').value,
+          arrivalTime: document.getElementById('arrival-time').value,
+          tantoshaName: gData.tantoshaName, 
+          items: items
+        };
         
-        tantoshaName: gData.tantoshaName,
-        items: items
-      };
-      
-      document.getElementById('loader').innerHTML = '<p>処理中です...<br>出荷伝票を作成しています。<br>しばらくお待ちください。</p>';
-      showLoader(true);
-      google.script.run.withSuccessHandler(showSuccess).withFailureHandler(showError).processShipment(sendData);
+        showLoader(true, isEditMode ? '上書き再作成中...' : '伝票作成中...');
+        const handler = isEditMode ? 'updateShipment' : 'processShipment';
+        google.script.run
+          .withSuccessHandler(showSuccess)
+          .withFailureHandler(showError)
+          [handler](sendData);
+      } catch(e) {
+        showError('予期せぬエラーが発生しました: ' + e.message);
+      }
     }
 
     function showSuccess(res) {
       showLoader(false);
       if(res.status === 'error') { showError(res.message); return; }
-      document.getElementById('main-content').style.display = 'none';
+      
       const msg = document.getElementById('message-area');
       msg.style.display = 'block';
       msg.className = 'success';
+      let txt = '新しい伝票を作成しました。';
+      if (isEditMode) txt = '元の伝票を削除し、新しい内容で再作成しました。';
+      if (isCopyMode) txt = 'イレギュラー伝票を作成しました。（在庫変動なし）';
+
       msg.innerHTML = `
-        <strong>出荷処理が完了しました。</strong><br>
-        「出荷済明細」シートに記録し、「出荷済数」を更新しました。<br>
-        新しいスプレッドシート（${res.newSheetName}）が作成されました。<br><br>
-        <a href="${res.newSheetUrl}" target="_blank" style="display:block; margin:10px 0; padding:10px; background:#28a745; color:white; text-align:center; text-decoration:none; border-radius:5px;">作成した伝票ファイルを開く</a>
-        <button class="button button-secondary" onclick="runDataFetch()">続けて別の出荷処理を行う（画面を更新）</button>
+        <strong>処理が完了しました。</strong><br>${txt}<br><br>
+        <a href="${res.newSheetUrl}" target="_blank" style="padding:10px; background:#28a745; color:white; text-decoration:none; border-radius:5px;">ファイルを開く</a>
+        <button class="button button-secondary" type="button" onclick="resetPage()">最初の画面に戻る</button>
       `;
+      document.getElementById('main-content').style.display = 'none';
+    }
+
+    function resetPage() {
+      const url = `${APP_URL}?juchuNo=${encodeURIComponent(initialJuchuNo)}`;
+      window.top.location.href = url;
     }
 
     function showLoader(visible, text) {
@@ -418,6 +939,119 @@
       if(text) l.querySelector('p').innerHTML = text;
     }
     function showError(msg) { showLoader(false); alert('エラー: ' + msg); }
+    
+    // --- 確認者関連 ---
+    function openConfirmModal(slipId) {
+      currentConfirmSlipId = slipId;
+      document.getElementById('confirm-name-select').value = '';
+      document.getElementById('confirm-modal').style.display = 'block';
+    }
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').style.display = 'none';
+      currentConfirmSlipId = null;
+    }
+    function submitConfirm() {
+      const confirmName = document.getElementById('confirm-name-select').value;
+      if (!confirmName) { alert('確認者を選択してください。'); return; }
+      
+      showLoader(true, '確認者を登録しています...');
+      google.script.run
+        .withSuccessHandler((res) => {
+          showLoader(false);
+          if (res.status === 'error') { showError(res.message); }
+          else {
+             alert('確認者の登録が完了しました。');
+             closeConfirmModal();
+          }
+        })
+        .withFailureHandler(showError)
+        .addConfirmName(gData.juchuNo, currentConfirmSlipId, confirmName);
+    }
+
+    // --- 返品関連 ---
+    function openReturnModal(slipId) {
+      currentReturnSlipId = slipId;
+      showLoader(true, '出荷データを取得中...');
+      google.script.run.withSuccessHandler(detailsRes => {
+        showLoader(false);
+        if(detailsRes.status === 'error') { showError(detailsRes.message); return; }
+        const details = detailsRes.details;
+        const targetItems = gData.meisaiList.filter(item => {
+          const key = Object.keys(details).find(k => String(k).trim() === String(item.meisaiNo).trim());
+          return key && details[key] > 0;
+        }).map(item => {
+          const key = Object.keys(details).find(k => String(k).trim() === String(item.meisaiNo).trim());
+          return { ...item, shippedQty: details[key] };
+        });
+        renderReturnItemList(targetItems);
+        document.getElementById('return-modal').style.display = 'block';
+      }).getHistoryDetails(slipId);
+    }
+    function closeReturnModal() {
+      document.getElementById('return-modal').style.display = 'none';
+      currentReturnSlipId = null;
+    }
+    function renderReturnItemList(items) {
+      const container = document.getElementById('return-item-list');
+      container.innerHTML = '';
+      if(items.length === 0) {
+        container.innerHTML = '<li>この伝票の出荷記録が見つかりません。</li>';
+        return;
+      }
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'item';
+        li.dataset.meisaiNo = item.meisaiNo;
+        li.dataset.shohinCode = item.shohinCode;
+        li.dataset.shohinName = item.shohinName;
+        li.innerHTML = `
+          <div style="margin-bottom:5px;"><strong>${item.shohinName}</strong> (出荷済: ${item.shippedQty})</div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:80px;"><label style="font-size:0.8em;">返品数</label><input type="number" class="return-qty" min="0" max="${item.shippedQty}" value="0" style="width:100%;"></div>
+            <div style="flex-grow:1;"><label style="font-size:0.8em;">シリアルNo</label><input type="text" class="return-serial" placeholder="例: 00123" style="width:100%;"></div>
+          </div>
+        `;
+        container.appendChild(li);
+      });
+    }
+    function submitReturn() {
+      if(!confirm('返品処理を実行しますか？')) return;
+      const items = [];
+      let totalReturn = 0;
+      document.querySelectorAll('#return-item-list .item').forEach(li => {
+        const qty = parseInt(li.querySelector('.return-qty').value) || 0;
+        const serial = li.querySelector('.return-serial').value;
+        if (qty > 0) {
+          items.push({
+            meisaiNo: li.dataset.meisaiNo,
+            rowNum: gData.meisaiList.find(m => String(m.meisaiNo) === li.dataset.meisaiNo).rowNum,
+            shohinCode: li.dataset.shohinCode,
+            shohinName: li.dataset.shohinName,
+            returnQty: qty,
+            serialNo: serial
+          });
+          totalReturn += qty;
+        }
+      });
+      if (totalReturn === 0) { alert('返品する数量を入力してください。'); return; }
+      const returnData = {
+        juchuNo: gData.juchuNo,
+        slipId: currentReturnSlipId,
+        returnDate: document.getElementById('return-date').value,
+        completeDate: document.getElementById('return-complete-date').value,
+        returnReqNo: document.getElementById('return-req-no').value,
+        shippingCostType: document.getElementById('return-ship-type').value,
+        shippingCost: document.getElementById('return-ship-cost').value,
+        tantoshaName: gData.tantoshaName, // 受注担当者
+        items: items
+      };
+      showLoader(true, '返品処理を実行中...');
+      google.script.run.withSuccessHandler((res) => {
+          showLoader(false);
+          if (res.status === 'error') { showError(res.message); } 
+          else { alert('返品処理が完了しました。'); closeReturnModal(); loadMasterData(gData.juchuNo); }
+        }).withFailureHandler(showError).processReturn(returnData);
+    }
   </script>
 </body>
 </html>
